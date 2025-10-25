@@ -13,7 +13,7 @@ class _Subscription_youState extends State<Subscription_you> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter Subscription Tracker'),
+        title: const Text("Welcome Subscription"),
       ),
     );
   }

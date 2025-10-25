@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "Workshops 5GamiX",
+      title: "Media Manager App",
       routes: {
         "/": (context) => const NavBottom(),
         "/navBottom": (context) => const NavBottom(),

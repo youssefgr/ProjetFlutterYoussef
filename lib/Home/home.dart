@@ -21,7 +21,7 @@ class _Home_youState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("G-Store ESPRIT"),
+        title: const Text("Welcome Home"),
 
       ),
     );

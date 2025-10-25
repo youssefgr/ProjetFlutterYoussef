@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-
 import 'package:projetflutteryoussef/Home/home.dart';
 import 'package:projetflutteryoussef/Pages/expenses_page.dart';
 import 'package:projetflutteryoussef/Pages/subscription_page.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
-
+import 'package:projetflutteryoussef/Crud/Akram/media_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -15,24 +13,27 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), Expenses(), Subscription_you()];
+  final List<Widget> _interfaces = const [Home(), MediaList(), Expenses(), Subscription_you()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("G-Store ESPRIT")),
+      appBar: AppBar(title: const Text("Media Manager App")),
       drawer: Drawer(
         child: Column(
           children: [
             AppBar(
-              title: const Text("G-Stoer ESPRIT"),
+              title: const Text("MENU"),
               automaticallyImplyLeading: false,
             ),
             ListTile(
-              leading: const Icon(Icons.tab_rounded),
+              leading: const Icon(Icons.movie),
               title: const Text("Media Management"),
               onTap: () {
-                Navigator.pushReplacementNamed(context, "/");
+                setState(() {
+                  _currentIndex = 1; // MediaList index
+                });
+                Navigator.pop(context);
               },
             ),
             ListTile(
@@ -43,10 +44,13 @@ class _NavBottomState extends State<NavBottom> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.tab_rounded),
-              title: const Text("Navigation par tab"),
+              leading: const Icon(Icons.home),
+              title: const Text("Home"),
               onTap: () {
-                Navigator.pushReplacementNamed(context, "/");
+                setState(() {
+                  _currentIndex = 0; // Home index
+                });
+                Navigator.pop(context);
               },
             ),
             ListTile(
@@ -61,17 +65,24 @@ class _NavBottomState extends State<NavBottom> {
       ),
       body: _interfaces[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
-        items: [
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        items: const [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
+            icon: Icon(Icons.home),
             label: "Home",
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.monetization_on),
+            icon: Icon(Icons.movie),
+            label: "Media",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monetization_on),
             label: "Expenses",
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.subscript),
+            icon: Icon(Icons.subscript),
             label: "Subscription",
           )
         ],

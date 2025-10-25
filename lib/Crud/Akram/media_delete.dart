@@ -1,0 +1,92 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/utils/image_utils.dart';
+
+class MediaDelete extends StatelessWidget {
+  final MediaItem mediaItem;
+  final VoidCallback onDelete;
+
+  const MediaDelete({
+    super.key,
+    required this.mediaItem,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Delete Media'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Are you sure you want to delete "${mediaItem.title}"?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 16),
+          if (mediaItem.posterUrl.isNotEmpty) ...[
+            FutureBuilder<File?>(
+              future: ImageUtils.getImageFile(mediaItem.posterUrl),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return Container(
+                    height: 100,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[100],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        snapshot.data!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+          const Text(
+            'This action cannot be undone.',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            // Delete the associated image file
+            if (mediaItem.posterUrl.isNotEmpty) {
+              await ImageUtils.deleteImage(mediaItem.posterUrl);
+            }
+
+            onDelete();
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('"${mediaItem.title}" deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
+    );
+  }
+}
