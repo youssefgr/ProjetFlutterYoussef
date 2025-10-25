@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
 
 class MediaRepository {
   static const String _fileName = 'media_data.json';
@@ -20,7 +21,9 @@ class MediaRepository {
       final jsonString = jsonEncode(jsonList);
       await file.writeAsString(jsonString);
     } catch (e) {
-      print('Error saving media data: $e');
+      if (kDebugMode) {
+        print('Error saving media data: $e');
+      }
     }
   }
 
@@ -34,7 +37,9 @@ class MediaRepository {
         return jsonList.map((json) => _mediaItemFromJson(json)).toList();
       }
     } catch (e) {
-      print('Error loading media data: $e');
+      if (kDebugMode) {
+        print('Error loading media data: $e');
+      }
     }
     return [];
   }

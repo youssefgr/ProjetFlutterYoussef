@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 
 class MediaDelete extends StatelessWidget {

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Home/home.dart';
-import 'package:projetflutteryoussef/Pages/expenses_page.dart';
-import 'package:projetflutteryoussef/Pages/subscription_page.dart';
-import 'package:projetflutteryoussef/Crud/Akram/media_list.dart';
+import 'package:projetflutteryoussef/Views/Home/home.dart';
+import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -13,7 +11,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList(), Expenses(), Subscription_you()];
+  final List<Widget> _interfaces = const [Home(), MediaList()];
 
   @override
   Widget build(BuildContext context) {
@@ -37,27 +35,43 @@ class _NavBottomState extends State<NavBottom> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text("Modifier le profil"),
-              onTap: () {
-                Navigator.pushNamed(context, "/home/editProfile");
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Home"),
+              leading: const Icon(Icons.movie),
+              title: const Text("Cloud Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // Home index
+                  _currentIndex = 0; // MediaList index
                 });
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text("Se déconnecter"),
+              leading: const Icon(Icons.movie),
+              title: const Text("Expenses Management"),
               onTap: () {
-                Navigator.pushReplacementNamed(context, "/");
+                setState(() {
+                  _currentIndex = 0; // MediaList index
+                });
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.movie),
+              title: const Text("Community Management"),
+              onTap: () {
+                setState(() {
+                  _currentIndex = 0; // MediaList index
+                });
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.movie),
+              title: const Text("Event Management"),
+              onTap: () {
+                setState(() {
+                  _currentIndex = 0; // MediaList index
+                });
+                Navigator.pop(context);
               },
             ),
           ],
@@ -73,18 +87,26 @@ class _NavBottomState extends State<NavBottom> {
             icon: Icon(Icons.home),
             label: "Home",
           ),
+          /*BottomNavigationBarItem(
+            icon: Icon(Icons.edit),
+            label: "Edit Profile",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout),
+            label: "Disconnect",
+          ),*/
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
             label: "Media",
-          ),
-          BottomNavigationBarItem(
+          )
+          /*BottomNavigationBarItem(
             icon: Icon(Icons.monetization_on),
             label: "Expenses",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.subscript),
             label: "Subscription",
-          )
+          )*/
         ],
         currentIndex: _currentIndex,
         onTap: (int index) {

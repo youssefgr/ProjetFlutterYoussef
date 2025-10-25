@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
 import '../../utils/image_utils.dart';
 import 'media_edit.dart';
 import 'media_delete.dart';
@@ -65,10 +65,8 @@ class MediaDetail extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Poster Image - loads from assets
-            Center(
-              child: _buildPosterImage(),
-            ),
+            // Poster Image - expands to full width
+            _buildPosterImage(),
             const SizedBox(height: 24),
 
             // Title
@@ -131,13 +129,23 @@ class MediaDetail extends StatelessWidget {
   Widget _buildPosterImage() {
     if (mediaItem.posterUrl.isEmpty) {
       return Container(
-        width: 200,
+        width: double.infinity,
         height: 300,
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.movie, size: 60, color: Colors.grey),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.movie, size: 80, color: Colors.grey),
+            SizedBox(height: 8),
+            Text(
+              'No Image',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ],
+        ),
       );
     }
 
@@ -146,19 +154,29 @@ class MediaDetail extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
-            width: 200,
+            width: double.infinity,
             height: 300,
             decoration: BoxDecoration(
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.movie, size: 60, color: Colors.grey),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Loading image...',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
           );
         }
 
         if (snapshot.hasData && snapshot.data != null) {
           return Container(
-            width: 200,
+            width: double.infinity,
             height: 300,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -174,7 +192,7 @@ class MediaDetail extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: Image.file(
                 snapshot.data!,
-                width: 200,
+                width: double.infinity,
                 height: 300,
                 fit: BoxFit.cover,
               ),
@@ -183,7 +201,7 @@ class MediaDetail extends StatelessWidget {
         }
 
         return Container(
-          width: 200,
+          width: double.infinity,
           height: 300,
           decoration: BoxDecoration(
             color: Colors.grey[200],
@@ -192,11 +210,11 @@ class MediaDetail extends StatelessWidget {
           child: const Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.broken_image, size: 60, color: Colors.grey),
+              Icon(Icons.broken_image, size: 80, color: Colors.grey),
               SizedBox(height: 8),
               Text(
                 'Image not found',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             ],
           ),

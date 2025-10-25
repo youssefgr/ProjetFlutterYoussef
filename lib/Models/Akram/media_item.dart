@@ -1,4 +1,4 @@
-import 'media_entities.dart';
+import 'media_models.dart';
 
 class MediaItem {
   final String id;

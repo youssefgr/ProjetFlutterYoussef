@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Navigation/nav_bottom.dart';
-import 'package:projetflutteryoussef/Pages/expenses_page.dart';
+import 'package:projetflutteryoussef/Views/Shared/Navigation/nav_bottom.dart';
 
 void main() {
   runApp(const MyApp());

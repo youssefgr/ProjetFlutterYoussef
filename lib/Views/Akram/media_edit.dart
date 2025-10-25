@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 
 class MediaEdit extends StatefulWidget {
@@ -82,7 +82,7 @@ class _MediaEditState extends State<MediaEdit> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaCategory>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value!;
@@ -102,7 +102,7 @@ class _MediaEditState extends State<MediaEdit> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaViewStatus>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value!;
@@ -287,10 +287,9 @@ class _MediaEditState extends State<MediaEdit> {
         status: _selectedStatus,
         releaseDate: _selectedDate,
         genres: _selectedGenres,
-        // Keep the existing posterUrl
       );
 
-      Navigator.pop(context, updatedItem);
+      Navigator.pop(context, updatedItem); // Return the item, don't update here
     }
   }
 

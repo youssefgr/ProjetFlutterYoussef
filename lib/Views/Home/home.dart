@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 
 class Home extends StatefulWidget {
   const Home({super.key});
 
   @override
-  State<Home> createState() => _Home_youState();
+  State<Home> createState() => _HomeState();
 }
 
-class _Home_youState extends State<Home> {
+class _HomeState extends State<Home> {
 
   @override
   void initState() {

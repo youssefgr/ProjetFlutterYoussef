@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
+import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 
 class MediaAdd extends StatefulWidget {
@@ -19,7 +19,7 @@ class _MediaAddState extends State<MediaAdd> {
   MediaCategory _selectedCategory = MediaCategory.film;
   MediaViewStatus _selectedStatus = MediaViewStatus.toView;
   DateTime _selectedDate = DateTime.now();
-  List<MediaGenre> _selectedGenres = [];
+  final List<MediaGenre> _selectedGenres = [];
 
   File? _selectedImage;
   String? _savedImageName; // Store just the image name with extension
@@ -74,7 +74,7 @@ class _MediaAddState extends State<MediaAdd> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaCategory>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value!;
@@ -94,7 +94,7 @@ class _MediaAddState extends State<MediaAdd> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaViewStatus>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value!;
@@ -287,7 +287,7 @@ class _MediaAddState extends State<MediaAdd> {
   Future<void> _processSelectedImage(File imageFile, String originalName) async {
     try {
       // Save image to app directory
-      final String savedPath = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
+      final String _ = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
 
       setState(() {
         _selectedImage = imageFile;
@@ -325,13 +325,13 @@ class _MediaAddState extends State<MediaAdd> {
     );
   }
 
-  Future<void> _saveMedia() async {
+  void _saveMedia() {
     if (_formKey.currentState!.validate()) {
       final newItem = MediaItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         category: _selectedCategory,
         title: _titleController.text,
-        posterUrl: _savedImageName ?? '', // Store just the image name
+        posterUrl: _savedImageName ?? '',
         releaseDate: _selectedDate,
         description: _descriptionController.text,
         status: _selectedStatus,
@@ -339,7 +339,7 @@ class _MediaAddState extends State<MediaAdd> {
       );
 
       _showSuccessSnackBar('Media added successfully!');
-      Navigator.pop(context, newItem);
+      Navigator.pop(context, newItem); // Return the item, don't save here
     }
   }
 
