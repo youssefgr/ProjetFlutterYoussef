@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Navigation_you/nav_bottom_you.dart';
-import 'package:projetflutteryoussef/Pages_you/expenses_page_you.dart';
+import 'package:projetflutteryoussef/Navigation/nav_bottom.dart';
+import 'package:projetflutteryoussef/Pages/expenses_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,8 +14,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: "Workshops 5GamiX",
       routes: {
-        "/": (context) => const NavBottom_you(),
-        "/navBottom": (context) => const NavBottom_you(),
+        "/": (context) => const NavBottom(),
+        "/navBottom": (context) => const NavBottom(),
       },
     );
   }

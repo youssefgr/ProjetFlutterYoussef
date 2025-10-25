@@ -3,14 +3,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 
-class Home_you extends StatefulWidget {
-  const Home_you({super.key});
+class Home extends StatefulWidget {
+  const Home({super.key});
 
   @override
-  State<Home_you> createState() => _Home_youState();
+  State<Home> createState() => _Home_youState();
 }
 
-class _Home_youState extends State<Home_you> {
+class _Home_youState extends State<Home> {
 
   @override
   void initState() {

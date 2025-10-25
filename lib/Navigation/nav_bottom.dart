@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'package:projetflutteryoussef/Home/home.dart';
+import 'package:projetflutteryoussef/Pages/expenses_page.dart';
+import 'package:projetflutteryoussef/Pages/subscription_page.dart';
+import 'package:projetflutteryoussef/Entities/Akram/media_entities.dart';
 
-import 'package:projetflutteryoussef/Home_you/home_you.dart';
-import 'package:projetflutteryoussef/Pages_you/expenses_page_you.dart';
-import 'package:projetflutteryoussef/Pages_you/subscription_page_you.dart';
-import 'package:flutter/material.dart';
 
-
-class NavBottom_you extends StatefulWidget {
-  const NavBottom_you({super.key});
+class NavBottom extends StatefulWidget {
+  const NavBottom({super.key});
 
   @override
-  State<NavBottom_you> createState() => _NavBottom_youState();
+  State<NavBottom> createState() => _NavBottomState();
 }
 
-class _NavBottom_youState extends State<NavBottom_you> {
+class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home_you(), Expenses_you(), Subscription_you()];
+  final List<Widget> _interfaces = const [Home(), Expenses(), Subscription_you()];
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +29,13 @@ class _NavBottom_youState extends State<NavBottom_you> {
               automaticallyImplyLeading: false,
             ),
             ListTile(
+              leading: const Icon(Icons.tab_rounded),
+              title: const Text("Media Management"),
+              onTap: () {
+                Navigator.pushReplacementNamed(context, "/");
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.edit),
               title: const Text("Modifier le profil"),
               onTap: () {
@@ -40,7 +46,7 @@ class _NavBottom_youState extends State<NavBottom_you> {
               leading: const Icon(Icons.tab_rounded),
               title: const Text("Navigation par tab"),
               onTap: () {
-                Navigator.pushReplacementNamed(context, "/navTab");
+                Navigator.pushReplacementNamed(context, "/");
               },
             ),
             ListTile(
