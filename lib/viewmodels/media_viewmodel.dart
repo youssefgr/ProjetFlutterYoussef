@@ -6,23 +6,113 @@ class MediaViewModel {
   List<MediaItem> _mediaItems = [];
   List<MediaItem> get mediaItems => _mediaItems;
 
+  // Search and filter properties
+  String _searchQuery = '';
+  MediaCategory? _selectedCategory;
+  MediaViewStatus? _selectedStatus;
+  List<MediaGenre> _selectedGenres = [];
+
+  // Getters for filter states
+  String get searchQuery => _searchQuery;
+  MediaCategory? get selectedCategory => _selectedCategory;
+  MediaViewStatus? get selectedStatus => _selectedStatus;
+  List<MediaGenre> get selectedGenres => List.from(_selectedGenres);
+
   // State management callbacks
   Function()? onMediaItemsUpdated;
 
-  // Load media items
+  // Get filtered media items
+  List<MediaItem> get filteredMediaItems {
+    return _mediaItems.where((item) {
+      // Search filter
+      final matchesSearch = _searchQuery.isEmpty ||
+          item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          item.description.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      // Category filter
+      final matchesCategory = _selectedCategory == null || item.category == _selectedCategory;
+
+      // Status filter
+      final matchesStatus = _selectedStatus == null || item.status == _selectedStatus;
+
+      // Genre filter
+      final matchesGenre = _selectedGenres.isEmpty ||
+          item.genres.any((genre) => _selectedGenres.contains(genre));
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesGenre;
+    }).toList();
+  }
+
+  // Search methods
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    onMediaItemsUpdated?.call();
+  }
+
+  void clearSearch() {
+    _searchQuery = '';
+    onMediaItemsUpdated?.call();
+  }
+
+  // Filter methods
+  void setCategoryFilter(MediaCategory? category) {
+    _selectedCategory = category;
+    onMediaItemsUpdated?.call();
+  }
+
+  void setStatusFilter(MediaViewStatus? status) {
+    _selectedStatus = status;
+    onMediaItemsUpdated?.call();
+  }
+
+  void toggleGenreFilter(MediaGenre genre) {
+    if (_selectedGenres.contains(genre)) {
+      _selectedGenres.remove(genre);
+    } else {
+      _selectedGenres.add(genre);
+    }
+    onMediaItemsUpdated?.call();
+  }
+
+  void clearAllFilters() {
+    _selectedCategory = null;
+    _selectedStatus = null;
+    _selectedGenres.clear();
+    _searchQuery = '';
+    onMediaItemsUpdated?.call();
+  }
+
+  // Get current filter states
+  bool get hasActiveFilters {
+    return _searchQuery.isNotEmpty ||
+        _selectedCategory != null ||
+        _selectedStatus != null ||
+        _selectedGenres.isNotEmpty;
+  }
+
+  String get activeFiltersDescription {
+    final filters = <String>[];
+    if (_searchQuery.isNotEmpty) filters.add('Search: "$_searchQuery"');
+    if (_selectedCategory != null) filters.add('Category: ${_selectedCategory.toString().split('.').last}');
+    if (_selectedStatus != null) filters.add('Status: ${_selectedStatus.toString().split('.').last}');
+    if (_selectedGenres.isNotEmpty) {
+      filters.add('Genres: ${_selectedGenres.map((g) => g.toString().split('.').last).join(', ')}');
+    }
+    return filters.join(' • ');
+  }
+
+  // Original methods (unchanged)
   Future<void> loadMediaItems() async {
     _mediaItems = await MediaRepository.loadMediaItems();
     onMediaItemsUpdated?.call();
   }
 
-  // Add media item
   Future<void> addMediaItem(MediaItem item) async {
     _mediaItems.add(item);
     await MediaRepository.saveMediaItems(_mediaItems);
     onMediaItemsUpdated?.call();
   }
 
-  // Update media item
   Future<void> updateMediaItem(MediaItem updatedItem) async {
     final index = _mediaItems.indexWhere((item) => item.id == updatedItem.id);
     if (index != -1) {
@@ -32,7 +122,6 @@ class MediaViewModel {
     }
   }
 
-  // Delete media item
   Future<void> deleteMediaItem(String id) async {
     final item = _mediaItems.firstWhere((item) => item.id == id);
     if (item.posterUrl.isNotEmpty) {
@@ -43,7 +132,6 @@ class MediaViewModel {
     onMediaItemsUpdated?.call();
   }
 
-  // Update status via drag & drop
   Future<void> updateMediaStatus(String itemId, MediaViewStatus newStatus) async {
     final index = _mediaItems.indexWhere((item) => item.id == itemId);
     if (index != -1) {
@@ -53,8 +141,7 @@ class MediaViewModel {
     }
   }
 
-  // Get items by status
   List<MediaItem> getItemsByStatus(MediaViewStatus status) {
-    return _mediaItems.where((item) => item.status == status).toList();
+    return filteredMediaItems.where((item) => item.status == status).toList();
   }
 }
