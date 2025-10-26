@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'expenses_delete.dart';
 import '../expenses_edit.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
 
 class ExpensesDetail extends StatelessWidget {
   final Expenses expense;
@@ -23,8 +25,10 @@ class ExpensesDetail extends StatelessWidget {
       appBar: AppBar(
         title: Text(expense.title),
         actions: [
+          // Edit item
           IconButton(
             icon: const Icon(Icons.edit),
+            tooltip: 'Edit',
             onPressed: () {
               Navigator.push(
                 context,
@@ -33,27 +37,26 @@ class ExpensesDetail extends StatelessWidget {
                 ),
               ).then((updatedExpense) {
                 if (updatedExpense != null) {
-                  if (onUpdate != null) {
-                    onUpdate!(updatedExpense);
-                  }
+                  onUpdate?.call(updatedExpense);
                   Navigator.pop(context, updatedExpense);
                 }
               });
             },
           ),
+          // Delete item
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
+            tooltip: 'Delete',
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => ExpensesDelete(
-                  expense: expense,
-                  onDelete: () {
-                    if (onDelete != null) {
-                      onDelete!(expense.id);
-                    }
-                  },
-                ),
+                builder: (context) =>
+                    ExpensesDelete(
+                      expense: expense,
+                      onDelete: () {
+                        onDelete?.call(expense.id);
+                      },
+                    ),
               );
             },
           ),
@@ -66,41 +69,32 @@ class ExpensesDetail extends StatelessWidget {
           children: [
             _buildExpenseImage(),
             const SizedBox(height: 24),
-
             Text(
               expense.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-
             Row(
               children: [
                 _buildInfoChip('Category', expense.category.name, Colors.blue),
               ],
             ),
             const SizedBox(height: 16),
-
             _buildInfoRow(
               'Date',
               '${expense.date.day}/${expense.date.month}/${expense.date.year}',
             ),
             const SizedBox(height: 16),
-
             _buildInfoRow('Available', expense.amount.toStringAsFixed(0)),
             const SizedBox(height: 8),
-
             _buildInfoRow('Price', '${expense.price.toStringAsFixed(2)} €'),
             const SizedBox(height: 16),
-
             _buildInfoRow('User ID', expense.userId),
           ],
         ),
       ),
 
-      // Add to cart floating button
+      // Floating action button to add to cart
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.green,
         icon: const Icon(Icons.shopping_cart),
@@ -126,9 +120,7 @@ class ExpensesDetail extends StatelessWidget {
             Icon(Icons.image, size: 80, color: Colors.grey),
             SizedBox(height: 8),
             Text(
-              'No Image',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
+                'No Image', style: TextStyle(color: Colors.grey, fontSize: 16)),
           ],
         ),
       );
@@ -176,7 +168,7 @@ class ExpensesDetail extends StatelessWidget {
     );
   }
 
-  // Helper Widgets
+  // Info chip widget
   Widget _buildInfoChip(String label, String value, Color color) {
     return Chip(
       backgroundColor: color.withOpacity(0.2),
@@ -187,31 +179,35 @@ class ExpensesDetail extends StatelessWidget {
     );
   }
 
+  // Info row widget
   Widget _buildInfoRow(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            )),
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontSize: 16)),
       ],
     );
   }
 
-  // Show quantity dialog for Add to Cart
+  // The dialog for adding to cart
   void _showAddToCartDialog(BuildContext context) {
-    final TextEditingController _qtyController = TextEditingController(text: "1");
+    final TextEditingController qtyController = TextEditingController(
+        text: "1");
+    final cart = CartManager();
+
+    // Capture the parent Scaffold context BEFORE showing the dialog
+    final scaffoldContext = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: Text('Add "${expense.title}" to cart'),
           content: Column(
@@ -220,7 +216,7 @@ class ExpensesDetail extends StatelessWidget {
               const Text('Enter quantity to add:'),
               const SizedBox(height: 10),
               TextFormField(
-                controller: _qtyController,
+                controller: qtyController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
@@ -231,17 +227,18 @@ class ExpensesDetail extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              icon: const Icon(Icons.shopping_cart),
+              icon: const Icon(Icons.add_shopping_cart),
               label: const Text('Add'),
               onPressed: () {
-                final qty = int.tryParse(_qtyController.text) ?? 0;
+                final qty = int.tryParse(qtyController.text) ?? 0;
+
                 if (qty <= 0 || qty > expense.amount) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldContext.showSnackBar(
                     const SnackBar(
                       content: Text('Invalid quantity selected!'),
                       backgroundColor: Colors.red,
@@ -250,9 +247,14 @@ class ExpensesDetail extends StatelessWidget {
                   return;
                 }
 
-                Navigator.pop(context);
+                // Add to cart
+                cart.addToCart(expense, qty);
 
-                ScaffoldMessenger.of(context).showSnackBar(
+                // Close the dialog first
+                Navigator.pop(dialogContext);
+
+                // Now safely show the SnackBar using the saved scaffold context
+                scaffoldContext.showSnackBar(
                   SnackBar(
                     content: Text('$qty × "${expense.title}" added to cart!'),
                     backgroundColor: Colors.green,
@@ -260,7 +262,12 @@ class ExpensesDetail extends StatelessWidget {
                       label: 'View Cart',
                       textColor: Colors.white,
                       onPressed: () {
-                        // Future navigation to cart page
+                        // Safe navigation using the valid ScaffoldMessenger context
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (
+                              context) => const CartView()),
+                        );
                       },
                     ),
                   ),
