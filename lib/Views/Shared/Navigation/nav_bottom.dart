@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Home/home.dart';
 import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
+import 'package:projetflutteryoussef/Views/Youssef/expenses_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -11,7 +12,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList()];
+  final List<Widget> _interfaces = const [Home(), MediaList(),ExpensesList()];
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +50,7 @@ class _NavBottomState extends State<NavBottom> {
               title: const Text("Expenses Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 2;
                 });
                 Navigator.pop(context);
               },
@@ -98,6 +99,10 @@ class _NavBottomState extends State<NavBottom> {
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
             label: "Media",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monetization_on),
+            label: "Expenses",
           )
           /*BottomNavigationBarItem(
             icon: Icon(Icons.monetization_on),
