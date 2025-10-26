@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'expenses_delete.dart';
-import 'expenses_edit.dart';
+import '../expenses_edit.dart';
 
 class ExpensesDetail extends StatelessWidget {
   final Expenses expense;
@@ -78,11 +78,7 @@ class ExpensesDetail extends StatelessWidget {
 
             Row(
               children: [
-                _buildInfoChip(
-                  'Category',
-                  expense.category.name,
-                  Colors.blue,
-                ),
+                _buildInfoChip('Category', expense.category.name, Colors.blue),
               ],
             ),
             const SizedBox(height: 16),
@@ -93,7 +89,7 @@ class ExpensesDetail extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            _buildInfoRow('Amount', expense.amount.toStringAsFixed(2)),
+            _buildInfoRow('Available', expense.amount.toStringAsFixed(0)),
             const SizedBox(height: 8),
 
             _buildInfoRow('Price', '${expense.price.toStringAsFixed(2)} €'),
@@ -103,9 +99,18 @@ class ExpensesDetail extends StatelessWidget {
           ],
         ),
       ),
+
+      // Add to cart floating button
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.shopping_cart),
+        label: const Text('Add to Cart'),
+        onPressed: () => _showAddToCartDialog(context),
+      ),
     );
   }
 
+  // Image display
   Widget _buildExpenseImage() {
     if (expense.imageURL.isEmpty) {
       return Container(
@@ -140,30 +145,18 @@ class ExpensesDetail extends StatelessWidget {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: const Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          return Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                snapshot.data!,
-                width: double.infinity,
-                height: 300,
-                fit: BoxFit.cover,
-              ),
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              snapshot.data!,
+              width: double.infinity,
+              height: 300,
+              fit: BoxFit.cover,
             ),
           );
         }
@@ -175,22 +168,15 @@ class ExpensesDetail extends StatelessWidget {
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.broken_image, size: 80, color: Colors.grey),
-              SizedBox(height: 8),
-              Text(
-                'Image not found',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            ],
+          child: const Center(
+            child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
           ),
         );
       },
     );
   }
 
+  // Helper Widgets
   Widget _buildInfoChip(String label, String value, Color color) {
     return Chip(
       backgroundColor: color.withOpacity(0.2),
@@ -214,11 +200,76 @@ class ExpensesDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 16),
-        ),
+        Text(value, style: const TextStyle(fontSize: 16)),
       ],
+    );
+  }
+
+  // Show quantity dialog for Add to Cart
+  void _showAddToCartDialog(BuildContext context) {
+    final TextEditingController _qtyController = TextEditingController(text: "1");
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add "${expense.title}" to cart'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter quantity to add:'),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _qtyController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: 'Quantity (max: ${expense.amount.toInt()})',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              icon: const Icon(Icons.shopping_cart),
+              label: const Text('Add'),
+              onPressed: () {
+                final qty = int.tryParse(_qtyController.text) ?? 0;
+                if (qty <= 0 || qty > expense.amount) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invalid quantity selected!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$qty × "${expense.title}" added to cart!'),
+                    backgroundColor: Colors.green,
+                    action: SnackBarAction(
+                      label: 'View Cart',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        // Future navigation to cart page
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

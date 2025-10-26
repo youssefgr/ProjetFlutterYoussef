@@ -4,7 +4,7 @@ import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
 import 'package:projetflutteryoussef/viewmodels/expenses_viewmodel.dart';
 import 'expenses_add.dart';
 import 'expenses_detail.dart';
-import 'expenses_grid_item.dart';
+import '../expenses_grid_item.dart';
 
 class ExpensesList extends StatefulWidget {
   const ExpensesList({super.key});

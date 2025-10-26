@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Home/home.dart';
 import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
-import 'package:projetflutteryoussef/Views/Youssef/expenses_list.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses Crud/expenses_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
