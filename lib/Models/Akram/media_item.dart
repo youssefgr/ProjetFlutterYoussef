@@ -4,7 +4,7 @@ class MediaItem {
   final String id;
   final MediaCategory category;
   final String title;
-  final String posterUrl;
+  final String imageUrl;
   final DateTime releaseDate;
   final String description;
   final MediaViewStatus status;
@@ -14,7 +14,7 @@ class MediaItem {
     required this.id,
     required this.category,
     required this.title,
-    required this.posterUrl,
+    required this.imageUrl,
     required this.releaseDate,
     required this.description,
     required this.status,
@@ -26,7 +26,7 @@ class MediaItem {
       'id': id,
       'category': category.index,
       'title': title,
-      'posterUrl': posterUrl,
+      'posterUrl': imageUrl,
       'releaseDate': releaseDate.millisecondsSinceEpoch,
       'description': description,
       'status': status.index,
@@ -39,7 +39,7 @@ class MediaItem {
       id: map['id'],
       category: MediaCategory.values[map['category']],
       title: map['title'],
-      posterUrl: map['posterUrl'],
+      imageUrl: map['posterUrl'],
       releaseDate: DateTime.fromMillisecondsSinceEpoch(map['releaseDate']),
       description: map['description'],
       status: MediaViewStatus.values[map['status']],
@@ -61,7 +61,7 @@ class MediaItem {
       id: id ?? this.id,
       category: category ?? this.category,
       title: title ?? this.title,
-      posterUrl: posterUrl ?? this.posterUrl,
+      imageUrl: posterUrl ?? imageUrl,
       releaseDate: releaseDate ?? this.releaseDate,
       description: description ?? this.description,
       status: status ?? this.status,

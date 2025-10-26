@@ -1,12 +1,12 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import '../../utils/image_utils.dart';
-import 'media_edit.dart';
-import 'media_delete.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../utils/image_utils.dart';
+import '../../../viewmodels/Akram/media_comment_viewmodel.dart';
+import '../Comment/media_comment_views.dart';
+import 'media_views.dart';
 
-class MediaDetail extends StatelessWidget {
+class MediaDetail extends StatefulWidget {
   final MediaItem mediaItem;
   final Function(MediaItem)? onUpdate;
   final Function(String)? onDelete;
@@ -19,10 +19,23 @@ class MediaDetail extends StatelessWidget {
   });
 
   @override
+  State<MediaDetail> createState() => _MediaDetailState();
+}
+
+class _MediaDetailState extends State<MediaDetail> {
+  final CommentViewModel _commentViewModel = CommentViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+    _commentViewModel.loadCommentsForMedia(widget.mediaItem.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(mediaItem.title),
+        title: Text(widget.mediaItem.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -30,13 +43,11 @@ class MediaDetail extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => MediaEdit(mediaItem: mediaItem),
+                  builder: (context) => MediaEdit(mediaItem: widget.mediaItem),
                 ),
               ).then((updatedItem) {
-                if (updatedItem != null) {
-                  if (onUpdate != null) {
-                    onUpdate!(updatedItem);
-                  }
+                if (updatedItem != null && widget.onUpdate != null) {
+                  widget.onUpdate!(updatedItem);
                   Navigator.pop(context, updatedItem);
                 }
               });
@@ -48,10 +59,10 @@ class MediaDetail extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (context) => MediaDelete(
-                  mediaItem: mediaItem,
+                  mediaItem: widget.mediaItem,
                   onDelete: () {
-                    if (onDelete != null) {
-                      onDelete!(mediaItem.id);
+                    if (widget.onDelete != null) {
+                      widget.onDelete!(widget.mediaItem.id);
                     }
                   },
                 ),
@@ -65,13 +76,13 @@ class MediaDetail extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Poster Image - expands to full width
+            // Poster Image
             _buildPosterImage(),
             const SizedBox(height: 24),
 
             // Title
             Text(
-              mediaItem.title,
+              widget.mediaItem.title,
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -84,14 +95,14 @@ class MediaDetail extends StatelessWidget {
               children: [
                 _buildInfoChip(
                   'Category',
-                  mediaItem.category.toString().split('.').last,
+                  widget.mediaItem.category.toString().split('.').last,
                   Colors.blue,
                 ),
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   'Status',
-                  mediaItem.status.toString().split('.').last,
-                  _getStatusColor(mediaItem.status),
+                  widget.mediaItem.status.toString().split('.').last,
+                  _getStatusColor(widget.mediaItem.status),
                 ),
               ],
             ),
@@ -99,12 +110,12 @@ class MediaDetail extends StatelessWidget {
 
             // Release Date
             _buildInfoRow('Release Date',
-                '${mediaItem.releaseDate.day}/${mediaItem.releaseDate.month}/${mediaItem.releaseDate.year}'),
+                '${widget.mediaItem.releaseDate.day}/${widget.mediaItem.releaseDate.month}/${widget.mediaItem.releaseDate.year}'),
             const SizedBox(height: 16),
 
             // Genres
             _buildInfoRow('Genres',
-                mediaItem.genres.map((g) => g.toString().split('.').last).join(', ')),
+                widget.mediaItem.genres.map((g) => g.toString().split('.').last).join(', ')),
             const SizedBox(height: 16),
 
             // Description
@@ -117,8 +128,16 @@ class MediaDetail extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              mediaItem.description.isEmpty ? 'No description available' : mediaItem.description,
+              widget.mediaItem.description.isEmpty ? 'No description available' : widget.mediaItem.description,
               style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+
+            // Comments Section (Separated Component)
+            MediaCommentDetail(
+              mediaItemId: widget.mediaItem.id,
+              mediaTitle: widget.mediaItem.title,
+              commentViewModel: _commentViewModel,
             ),
           ],
         ),
@@ -127,7 +146,7 @@ class MediaDetail extends StatelessWidget {
   }
 
   Widget _buildPosterImage() {
-    if (mediaItem.posterUrl.isEmpty) {
+    if (widget.mediaItem.imageUrl.isEmpty) {
       return Container(
         width: double.infinity,
         height: 300,
@@ -150,7 +169,7 @@ class MediaDetail extends StatelessWidget {
     }
 
     return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(mediaItem.posterUrl),
+      future: ImageUtils.getImageFile(widget.mediaItem.imageUrl),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(

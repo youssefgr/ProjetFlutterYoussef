@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../utils/image_utils.dart';
 
 class MediaGridItem extends StatefulWidget {
   final MediaItem item;
@@ -185,7 +185,7 @@ class _MediaGridItemState extends State<MediaGridItem> {
 
   Widget _buildItemImage(double size, {bool forDrag = false}) {
     return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(widget.item.posterUrl),
+      future: ImageUtils.getImageFile(widget.item.imageUrl),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(

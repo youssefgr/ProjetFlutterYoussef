@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../utils/image_utils.dart';
 
 class MediaEdit extends StatefulWidget {
   final MediaItem mediaItem;
@@ -22,6 +23,12 @@ class _MediaEditState extends State<MediaEdit> {
   late DateTime _selectedDate;
   late List<MediaGenre> _selectedGenres;
 
+  File? _selectedImage;
+  String? _savedImageName;
+  bool _imageChanged = false;
+
+  final ImagePicker _picker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +39,21 @@ class _MediaEditState extends State<MediaEdit> {
     _selectedStatus = widget.mediaItem.status;
     _selectedDate = widget.mediaItem.releaseDate;
     _selectedGenres = List.from(widget.mediaItem.genres);
+
+    // Load existing image for preview
+    _loadExistingImage();
+  }
+
+  Future<void> _loadExistingImage() async {
+    if (widget.mediaItem.imageUrl.isNotEmpty) {
+      final imageFile = await ImageUtils.getImageFile(widget.mediaItem.imageUrl);
+      if (imageFile != null && await imageFile.exists()) {
+        setState(() {
+          _selectedImage = imageFile;
+          _savedImageName = widget.mediaItem.imageUrl;
+        });
+      }
+    }
   }
 
   @override
@@ -52,8 +74,8 @@ class _MediaEditState extends State<MediaEdit> {
           key: _formKey,
           child: ListView(
             children: [
-              // Image Info Section
-              _buildImageInfoSection(),
+              // Image Upload Section
+              _buildImageUploadSection(),
               const SizedBox(height: 20),
 
               TextFormField(
@@ -82,7 +104,7 @@ class _MediaEditState extends State<MediaEdit> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaCategory>(
-                initialValue: _selectedCategory,
+                value: _selectedCategory,
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value!;
@@ -102,7 +124,7 @@ class _MediaEditState extends State<MediaEdit> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaViewStatus>(
-                initialValue: _selectedStatus,
+                value: _selectedStatus,
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value!;
@@ -158,7 +180,7 @@ class _MediaEditState extends State<MediaEdit> {
     );
   }
 
-  Widget _buildImageInfoSection() {
+  Widget _buildImageUploadSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -168,66 +190,55 @@ class _MediaEditState extends State<MediaEdit> {
         ),
         const SizedBox(height: 8),
 
-        if (widget.mediaItem.posterUrl.isNotEmpty) ...[
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: FutureBuilder<File?>(
-              future: ImageUtils.getImageFile(widget.mediaItem.posterUrl),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: Colors.grey[400]),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Loading image...',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (snapshot.hasData && snapshot.data != null) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      snapshot.data!,
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                    ),
-                  );
-                }
-
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.broken_image, size: 50, color: Colors.grey[400]),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Image not found',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'File: ${widget.mediaItem.posterUrl}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: _selectedImage != null
+              ? ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              _selectedImage!,
+              width: double.infinity,
+              height: 200,
+              fit: BoxFit.cover,
+            ),
+          )
+              : _buildEmptyImageState(),
+        ),
+        const SizedBox(height: 8),
+
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Gallery'),
+                onPressed: _pickImageFromGallery,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            /*Expanded(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.photo_camera),
+                label: const Text('Camera'),
+                onPressed: _takePhotoWithCamera,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),*/
+          ],
+        ),
+
+        if (_savedImageName != null && !_imageChanged) ...[
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
@@ -242,44 +253,157 @@ class _MediaEditState extends State<MediaEdit> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Current Image: ${widget.mediaItem.posterUrl}',
+                    'Current Image: $_savedImageName',
                     style: const TextStyle(fontSize: 14),
                   ),
                 ),
               ],
             ),
           ),
-        ] else ...[
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.photo_library, size: 40, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('No image available'),
-                ],
-              ),
+        ],
+
+        if (_selectedImage != null) ...[
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.delete),
+            label: const Text('Remove Image'),
+            onPressed: _removeImage,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
             ),
           ),
         ],
 
-        const SizedBox(height: 8),
-        Text(
-          'Note: To change image, delete and recreate this media item.',
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
+        if (_imageChanged) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange, size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Image will be updated when you save',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  void _updateMedia() {
+  Widget _buildEmptyImageState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.photo_library, size: 50, color: Colors.grey[400]),
+          const SizedBox(height: 8),
+          Text(
+            'No image selected',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        await _processSelectedImage(File(image.path), image.name);
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to pick image: $e');
+    }
+  }
+
+  /*Future<void> _takePhotoWithCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        await _processSelectedImage(File(image.path), image.name);
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to take photo: $e');
+    }
+  }*/
+
+  Future<void> _processSelectedImage(File imageFile, String originalName) async {
+    try {
+      // Save image to app directory
+      final String savedPath = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
+
+      setState(() {
+        _selectedImage = imageFile;
+        _savedImageName = originalName;
+        _imageChanged = true;
+      });
+
+      _showSuccessSnackBar('New image selected: $originalName');
+    } catch (e) {
+      _showErrorSnackBar('Failed to save image: $e');
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+      _savedImageName = null;
+      _imageChanged = true;
+    });
+    _showSuccessSnackBar('Image removed');
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _updateMedia() async {
     if (_formKey.currentState!.validate()) {
+      String? newImagePath;
+
+      // Handle image changes (optional - not required)
+      if (_imageChanged) {
+        if (_selectedImage != null && _savedImageName != null) {
+          // New image was selected - use the new filename
+          newImagePath = _savedImageName;
+        } else if (_selectedImage == null) {
+          // Image was removed
+          if (widget.mediaItem.imageUrl.isNotEmpty) {
+            // Delete the old image file
+            await ImageUtils.deleteImage(widget.mediaItem.imageUrl);
+          }
+          newImagePath = '';
+        }
+      } else {
+        // No image change - keep the existing path
+        newImagePath = widget.mediaItem.imageUrl;
+      }
+
       final updatedItem = widget.mediaItem.copyWith(
         title: _titleController.text,
         description: _descriptionController.text,
@@ -287,9 +411,11 @@ class _MediaEditState extends State<MediaEdit> {
         status: _selectedStatus,
         releaseDate: _selectedDate,
         genres: _selectedGenres,
+        posterUrl: newImagePath ?? widget.mediaItem.imageUrl,
       );
 
-      Navigator.pop(context, updatedItem); // Return the item, don't update here
+      _showSuccessSnackBar('Media updated successfully!');
+      Navigator.pop(context, updatedItem);
     }
   }
 

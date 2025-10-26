@@ -1,8 +1,7 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../utils/image_utils.dart';
 
 class MediaDelete extends StatelessWidget {
   final MediaItem mediaItem;
@@ -27,9 +26,9 @@ class MediaDelete extends StatelessWidget {
             style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 16),
-          if (mediaItem.posterUrl.isNotEmpty) ...[
+          if (mediaItem.imageUrl.isNotEmpty) ...[
             FutureBuilder<File?>(
-              future: ImageUtils.getImageFile(mediaItem.posterUrl),
+              future: ImageUtils.getImageFile(mediaItem.imageUrl),
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
                   return Container(
@@ -67,8 +66,8 @@ class MediaDelete extends StatelessWidget {
         ElevatedButton(
           onPressed: () async {
             // Delete the associated image file
-            if (mediaItem.posterUrl.isNotEmpty) {
-              await ImageUtils.deleteImage(mediaItem.posterUrl);
+            if (mediaItem.imageUrl.isNotEmpty) {
+              await ImageUtils.deleteImage(mediaItem.imageUrl);
             }
 
             onDelete();

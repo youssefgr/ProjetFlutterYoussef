@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../utils/image_utils.dart';
 
 class MediaAdd extends StatefulWidget {
   const MediaAdd({super.key});
@@ -194,7 +194,7 @@ class _MediaAddState extends State<MediaAdd> {
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
+            /*Expanded(
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.photo_camera),
                 label: const Text('Camera'),
@@ -204,7 +204,7 @@ class _MediaAddState extends State<MediaAdd> {
                   foregroundColor: Colors.white,
                 ),
               ),
-            ),
+            ),*/
           ],
         ),
 
@@ -273,7 +273,7 @@ class _MediaAddState extends State<MediaAdd> {
     }
   }
 
-  Future<void> _takePhotoWithCamera() async {
+  /*Future<void> _takePhotoWithCamera() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.camera);
       if (image != null) {
@@ -282,7 +282,7 @@ class _MediaAddState extends State<MediaAdd> {
     } catch (e) {
       _showErrorSnackBar('Failed to take photo: $e');
     }
-  }
+  }*/
 
   Future<void> _processSelectedImage(File imageFile, String originalName) async {
     try {
@@ -331,7 +331,7 @@ class _MediaAddState extends State<MediaAdd> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         category: _selectedCategory,
         title: _titleController.text,
-        posterUrl: _savedImageName ?? '',
+        imageUrl: _savedImageName ?? '',
         releaseDate: _selectedDate,
         description: _descriptionController.text,
         status: _selectedStatus,

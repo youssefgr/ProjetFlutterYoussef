@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
+import '../../Models/Akram/media_models.dart';
 
 class MediaRepository {
   static const String _fileName = 'media_data.json';
@@ -50,7 +50,7 @@ class MediaRepository {
       'id': item.id,
       'category': item.category.index,
       'title': item.title,
-      'posterUrl': item.posterUrl,
+      'posterUrl': item.imageUrl,
       'releaseDate': item.releaseDate.millisecondsSinceEpoch,
       'description': item.description,
       'status': item.status.index,
@@ -64,7 +64,7 @@ class MediaRepository {
       id: json['id'],
       category: MediaCategory.values[json['category']],
       title: json['title'],
-      posterUrl: json['posterUrl'],
+      imageUrl: json['posterUrl'],
       releaseDate: DateTime.fromMillisecondsSinceEpoch(json['releaseDate']),
       description: json['description'],
       status: MediaViewStatus.values[json['status']],

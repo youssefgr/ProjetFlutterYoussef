@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/viewmodels/media_viewmodel.dart';
-import 'media_add.dart';
-import 'media_detail.dart';
-import 'media_grid_item.dart';
+import '../../../Models/Akram/media_models.dart';
+import '../../../viewmodels/Akram/media_viewmodel.dart';
+import 'media_views.dart';
 
 class MediaList extends StatefulWidget {
   const MediaList({super.key});
@@ -221,7 +219,7 @@ class _MediaListState extends State<MediaList> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            '$title (${sectionItems.length})',
+            '$title | ${sectionItems.length}',
             style: TextStyle(
               color: color,
               fontSize: 20,
@@ -329,7 +327,6 @@ class _MediaListState extends State<MediaList> {
   }
 }
 
-// Filter Dialog Widget
 // Filter Dialog Widget
 class FilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;

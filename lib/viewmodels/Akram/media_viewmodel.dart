@@ -1,6 +1,6 @@
-import 'package:projetflutteryoussef/Models/Akram/media_models.dart';
-import 'package:projetflutteryoussef/repositories/media_repository.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
+import '../../Models/Akram/media_models.dart';
+import '../../repositories/Akram/media_repository.dart';
+import '../../utils/image_utils.dart';
 
 class MediaViewModel {
   List<MediaItem> _mediaItems = [];
@@ -10,7 +10,7 @@ class MediaViewModel {
   String _searchQuery = '';
   MediaCategory? _selectedCategory;
   MediaViewStatus? _selectedStatus;
-  List<MediaGenre> _selectedGenres = [];
+  final List<MediaGenre> _selectedGenres = [];
 
   // Getters for filter states
   String get searchQuery => _searchQuery;
@@ -101,7 +101,6 @@ class MediaViewModel {
     return filters.join(' • ');
   }
 
-  // Original methods (unchanged)
   Future<void> loadMediaItems() async {
     _mediaItems = await MediaRepository.loadMediaItems();
     onMediaItemsUpdated?.call();
@@ -124,8 +123,8 @@ class MediaViewModel {
 
   Future<void> deleteMediaItem(String id) async {
     final item = _mediaItems.firstWhere((item) => item.id == id);
-    if (item.posterUrl.isNotEmpty) {
-      await ImageUtils.deleteImage(item.posterUrl);
+    if (item.imageUrl.isNotEmpty) {
+      await ImageUtils.deleteImage(item.imageUrl);
     }
     _mediaItems.removeWhere((item) => item.id == id);
     await MediaRepository.saveMediaItems(_mediaItems);

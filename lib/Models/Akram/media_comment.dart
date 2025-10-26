@@ -1,27 +1,30 @@
 class MediaComment {
   final String id;
-  final String itemId;
+  final String mediaItemId;
   final String userId;
+  final String userName;
   final DateTime date;
-  final double starRating;
+  final double rating;
   final String text;
 
   MediaComment({
     required this.id,
-    required this.itemId,
+    required this.mediaItemId,
     required this.userId,
+    required this.userName,
     required this.date,
-    required this.starRating,
+    required this.rating,
     required this.text,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'itemId': itemId,
+      'mediaItemId': mediaItemId,
       'userId': userId,
+      'userName': userName,
       'date': date.millisecondsSinceEpoch,
-      'starRating': starRating,
+      'rating': rating,
       'text': text,
     };
   }
@@ -29,28 +32,31 @@ class MediaComment {
   factory MediaComment.fromMap(Map<String, dynamic> map) {
     return MediaComment(
       id: map['id'],
-      itemId: map['itemId'],
+      mediaItemId: map['mediaItemId'],
       userId: map['userId'],
+      userName: map['userName'],
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
-      starRating: map['starRating'].toDouble(),
+      rating: map['rating'].toDouble(),
       text: map['text'],
     );
   }
 
   MediaComment copyWith({
     String? id,
-    String? itemId,
+    String? mediaItemId,
     String? userId,
+    String? userName,
     DateTime? date,
-    double? starRating,
+    double? rating,
     String? text,
   }) {
     return MediaComment(
       id: id ?? this.id,
-      itemId: itemId ?? this.itemId,
+      mediaItemId: mediaItemId ?? this.mediaItemId,
       userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
       date: date ?? this.date,
-      starRating: starRating ?? this.starRating,
+      rating: rating ?? this.rating,
       text: text ?? this.text,
     );
   }
