@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Shared/Navigation/nav_bottom.dart';
+import 'package:projetflutteryoussef/viewmodels/maamoune/user_viewmodel.dart';
+import 'package:projetflutteryoussef/viewmodels/maamoune/community_viewmodel.dart';
+import 'package:projetflutteryoussef/viewmodels/maamoune/friendship_viewmodel.dart';
 
 void main() {
   runApp(const MyApp());
