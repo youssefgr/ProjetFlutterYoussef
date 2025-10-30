@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:projetflutteryoussef/utils/image_utils.dart';
 
 class SubscriptionsAdd extends StatefulWidget {
   const SubscriptionsAdd({super.key});
@@ -13,9 +17,13 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
-
   List<SubscriptionCycle> _selectedCycles = [];
   DateTime _nextPaymentDate = DateTime.now();
+
+  File? _selectedImage;
+  String? _savedImagePath;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -42,6 +50,9 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
           key: _formKey,
           child: ListView(
             children: [
+              _buildImageUploadSection(),
+
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -69,7 +80,7 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
               const SizedBox(height: 16),
 
               const Text(
-                'Select Cycles :',
+                'Select Cycles:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -92,7 +103,6 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
                   );
                 }).toList(),
               ),
-
               const SizedBox(height: 16),
 
               ListTile(
@@ -109,6 +119,105 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
     );
   }
 
+  Widget _buildImageUploadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Subscription Image',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: _selectedImage != null
+              ? ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              _selectedImage!,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          )
+              : _buildEmptyImageState(),
+        ),
+        const SizedBox(height: 8),
+
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Gallery'),
+                onPressed: _pickImageFromGallery,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.photo_camera),
+                label: const Text('Camera'),
+                onPressed: _takePhotoWithCamera,
+              ),
+            ),
+          ],
+        ),
+
+        if (_savedImagePath != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 18),
+              const SizedBox(width: 8),
+              const Text(
+                'Image saved',
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmptyImageState() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.image, size: 50, color: Colors.grey[400]),
+        const SizedBox(height: 8),
+        Text('No image selected', style: TextStyle(color: Colors.grey[600])),
+      ],
+    ),
+  );
+
+  Future<void> _pickImageFromGallery() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      await _processSelectedImage(File(image.path), image.name);
+    }
+  }
+
+  Future<void> _takePhotoWithCamera() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      await _processSelectedImage(File(image.path), image.name);
+    }
+  }
+
+  Future<void> _processSelectedImage(File imageFile, String name) async {
+    final savedPath = await ImageUtils.saveImageToAppDirectory(imageFile, name);
+    setState(() {
+      _selectedImage = imageFile;
+      _savedImagePath = savedPath;
+    });
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
@@ -117,9 +226,7 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != _nextPaymentDate) {
-      setState(() {
-        _nextPaymentDate = picked;
-      });
+      setState(() => _nextPaymentDate = picked);
     }
   }
 
@@ -141,7 +248,8 @@ class _SubscriptionsAddState extends State<SubscriptionsAdd> {
         cost: double.parse(_costController.text),
         cycles: _selectedCycles,
         nextPaymentDate: _nextPaymentDate,
-        userId: 'current_user',  // À remplacer par l'utilisateur courant
+        userId: 'current_user',
+        imageURL: _savedImagePath ?? '',
       );
 
       ScaffoldMessenger.of(context).showSnackBar(

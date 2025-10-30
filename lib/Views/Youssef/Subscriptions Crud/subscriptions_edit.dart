@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
+import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
 
 class SubscriptionsEdit extends StatefulWidget {
   final Subscription subscription;

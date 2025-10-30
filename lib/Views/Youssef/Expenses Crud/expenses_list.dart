@@ -12,14 +12,21 @@ class ExpensesList extends StatefulWidget {
   @override
   State<ExpensesList> createState() => _ExpensesListState();
 }
-
 class _ExpensesListState extends State<ExpensesList> {
   final ExpensesViewModel _viewModel = ExpensesViewModel();
 
-  bool _isLoading = true;
+  List<Expenses> _allExpenses = [];
+  List<Expenses> _displayedExpenses = [];
 
-  // Used to update the badge dynamically when returning from the cart or details view
-  void _refreshCartBadge() => setState(() {});
+  bool _isLoading = true;
+  String _searchQuery = "";
+  bool _isSortAsc = true;
+
+  void _refreshCartBadge() {
+    setState(() {});
+  }
+
+  bool get _hasItemsInCart => CartManager().hasItems;
 
   @override
   void initState() {
@@ -29,20 +36,28 @@ class _ExpensesListState extends State<ExpensesList> {
   }
 
   void _onExpensesUpdated() {
-    setState(() {});
+    _allExpenses = _viewModel.expensesList;
+    _applyFilters();
   }
 
   Future<void> _loadExpenses() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     await _viewModel.loadExpenses();
-    setState(() {
-      _isLoading = false;
-    });
+    _allExpenses = _viewModel.expensesList;
+    _applyFilters();
+    setState(() => _isLoading = false);
   }
 
-  bool get _hasItemsInCart => CartManager().hasItems;
+  void _applyFilters() {
+    _displayedExpenses = _allExpenses.where((exp) {
+      final query = _searchQuery.toLowerCase();
+      return exp.title.toLowerCase().contains(query);
+    }).toList();
+
+    _displayedExpenses.sort((a, b) =>
+    _isSortAsc ? a.price.compareTo(b.price) : b.price.compareTo(a.price));
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,24 +69,27 @@ class _ExpensesListState extends State<ExpensesList> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Expenses'),
+        title: const Text('Mes dépenses'),
         actions: [
-          // Cart button with badge
+          IconButton(
+            icon: Icon(_isSortAsc ? Icons.arrow_downward : Icons.arrow_upward),
+            tooltip: 'Tri par prix',
+            onPressed: () {
+              _isSortAsc = !_isSortAsc;
+              _applyFilters();
+            },
+          ),
           Stack(
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_cart_outlined),
-                tooltip: 'View Cart',
+                tooltip: 'Voir le panier',
                 onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CartView()),
-                  );
+                  await Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const CartView()));
                   _refreshCartBadge();
                 },
               ),
-
-              // Red dot indicator (shows only if cart has items)
               if (_hasItemsInCart)
                 Positioned(
                   right: 8,
@@ -87,15 +105,13 @@ class _ExpensesListState extends State<ExpensesList> {
                 ),
             ],
           ),
-
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Add Expense',
+            tooltip: 'Ajouter une dépense',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ExpensesAdd()),
-              ).then((newExpense) {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const ExpensesAdd()))
+                  .then((newExpense) {
                 if (newExpense != null) {
                   _viewModel.addExpense(newExpense);
                 }
@@ -103,36 +119,50 @@ class _ExpensesListState extends State<ExpensesList> {
             },
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Rechercher...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white70,
+              ),
+              onChanged: (value) {
+                _searchQuery = value;
+                _applyFilters();
+              },
+            ),
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadExpenses,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildExpenseSection(ExpensesCategory.Manga, 'Manga', Colors.red),
-              const SizedBox(height: 16),
-              _buildExpenseSection(
-                  ExpensesCategory.Merchandise, 'Merchandise', Colors.blue),
-              const SizedBox(height: 16),
-              _buildExpenseSection(
-                  ExpensesCategory.EventTicket, 'Event Tickets', Colors.yellow),
-              const SizedBox(height: 16),
-            ],
-          ),
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          children: [
+            _buildExpenseSection(ExpensesCategory.Manga, 'Manga', Colors.red),
+            const SizedBox(height: 16),
+            _buildExpenseSection(ExpensesCategory.Merchandise, 'Merchandise', Colors.blue),
+            const SizedBox(height: 16),
+            _buildExpenseSection(ExpensesCategory.EventTicket, 'Billets d\'événement', Colors.yellow),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildExpenseSection(ExpensesCategory category, String title, Color color) {
-    final sectionExpenses = _viewModel.getExpensesByCategory(category);
+    final sectionExpenses = _displayedExpenses.where((exp) => exp.category == category).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section title
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -145,7 +175,6 @@ class _ExpensesListState extends State<ExpensesList> {
           ),
         ),
         const SizedBox(height: 8),
-
         Container(
           height: 190,
           color: Colors.transparent,
@@ -166,14 +195,14 @@ class _ExpensesListState extends State<ExpensesList> {
             Icon(Icons.receipt_long, size: 45, color: color.withOpacity(0.5)),
             const SizedBox(height: 6),
             Text(
-              'No expenses in $title',
+              'Aucune dépense dans $title',
               style: TextStyle(
                 color: color.withOpacity(0.75),
                 fontSize: 16,
               ),
             ),
             Text(
-              'Add one to get started!',
+              'Ajoute-en une pour commencer !',
               style: TextStyle(
                 color: color.withOpacity(0.5),
                 fontSize: 12,
@@ -203,12 +232,8 @@ class _ExpensesListState extends State<ExpensesList> {
                 MaterialPageRoute(
                   builder: (context) => ExpensesDetail(
                     expense: expense,
-                    onUpdate: (updatedExpense) {
-                      _viewModel.updateExpense(updatedExpense);
-                    },
-                    onDelete: (id) {
-                      _viewModel.deleteExpense(id);
-                    },
+                    onUpdate: (updatedExpense) => _viewModel.updateExpense(updatedExpense),
+                    onDelete: (id) => _viewModel.deleteExpense(id),
                   ),
                 ),
               );
@@ -218,29 +243,5 @@ class _ExpensesListState extends State<ExpensesList> {
         );
       },
     );
-  }
-}
-
-// A shared cart storage class to track cart items globally
-class _CartStorage {
-  static final List<Map<String, dynamic>> cartItems = [];
-
-  static void addToCart(Expenses expense, int qty) {
-    final existing = cartItems.firstWhere(
-          (item) => item['id'] == expense.id,
-      orElse: () => {},
-    );
-
-    if (existing.isNotEmpty) {
-      existing['qty'] += qty;
-    } else {
-      cartItems.add({
-        'id': expense.id,
-        'title': expense.title,
-        'qty': qty,
-        'price': expense.price,
-        'category': expense.category.name,
-      });
-    }
   }
 }

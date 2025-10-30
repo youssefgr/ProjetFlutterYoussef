@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
 
 class SubscriptionsDelete extends StatelessWidget {
   final Subscription subscription;

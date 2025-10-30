@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
-// Classe de stockage des données d'abonnements'
+import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
+
 class SubscriptionsRepository {
   static const String _fileName = 'subscriptions_data.json';
 
@@ -44,7 +45,7 @@ class SubscriptionsRepository {
     return [];
   }
 
-  // Convertit un objet Subscription en JSON
+  // Convertit un objet Subscription en JSON, gère imageURL
   static Map<String, dynamic> _subscriptionToJson(Subscription subscription) {
     return {
       'id': subscription.id,
@@ -53,10 +54,11 @@ class SubscriptionsRepository {
       'cycles': subscription.cycles.map((cycle) => cycle.index).toList(),
       'nextPaymentDate': subscription.nextPaymentDate.millisecondsSinceEpoch,
       'userId': subscription.userId,
+      'imageURL': subscription.imageURL, // Ajouté ici
     };
   }
 
-  // Convertit un JSON en objet Subscription
+  // Convertit un JSON en objet Subscription, gère imageURL
   static Subscription _subscriptionFromJson(Map<String, dynamic> json) {
     return Subscription(
       id: json['id'],
@@ -65,6 +67,7 @@ class SubscriptionsRepository {
       cycles: (json['cycles'] as List).map((index) => SubscriptionCycle.values[index]).toList(),
       nextPaymentDate: DateTime.fromMillisecondsSinceEpoch(json['nextPaymentDate']),
       userId: json['userId'],
+      imageURL: json['imageURL'] , // Ajouté ici
     );
   }
 }

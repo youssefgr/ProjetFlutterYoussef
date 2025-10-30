@@ -1,9 +1,10 @@
-import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
+import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
 import 'package:projetflutteryoussef/repositories/subscriptions_repository.dart';
 
 class SubscriptionsViewModel {
   List<Subscription> _subscriptionsList = [];
-  List<Subscription> get subscriptionsList => _subscriptionsList;
+  List<Subscription> get subscriptionsList => List.unmodifiable(_subscriptionsList);
 
   // Callback déclenché lorsque la liste des abonnements change
   Function()? onSubscriptionsUpdated;
@@ -39,7 +40,7 @@ class SubscriptionsViewModel {
     onSubscriptionsUpdated?.call();
   }
 
-  // Filtrer les abonnements par cycle (ExpensesCategory)
+  // Filtrer les abonnements par cycle (SubscriptionCycle)
   List<Subscription> getSubscriptionsByCycle(SubscriptionCycle cycle) {
     return _subscriptionsList.where((sub) => sub.cycles.contains(cycle)).toList();
   }
