@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 class CartView extends StatefulWidget {
   const CartView({super.key});

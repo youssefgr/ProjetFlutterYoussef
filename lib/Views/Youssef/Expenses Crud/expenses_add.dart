@@ -248,7 +248,7 @@ class _ExpensesAddState extends State<ExpensesAdd> {
         amount: double.parse(_amountController.text),
         price: double.parse(_priceController.text),
         imageURL: _savedImagePath ?? '',
-        userId: 'current_user', // À remplacer plus tard
+        userId: 'current_user', // a remplacer plus tard
       );
 
       _showSnackBar('Expense added successfully!', Colors.green);

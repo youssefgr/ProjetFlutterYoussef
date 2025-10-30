@@ -4,7 +4,7 @@ class Subscription {
  final String id;
  final String name;
  final double cost;
- final List<ExpensesCategory> cycles;
+ final List<SubscriptionCycle> cycles;
  final DateTime nextPaymentDate;
  final String userId;
 
@@ -26,7 +26,7 @@ return Subscription(
   id: map['id'],
   name: map['name'],
   cost: map['cost'].toDouble(),
-  cycles: (map['cycles'] as List).map((index) => ExpensesCategory.values[index]).toList(),
+  cycles: (map['cycles'] as List).map((index) => SubscriptionCycle.values[index]).toList(),
   nextPaymentDate: DateTime.fromMillisecondsSinceEpoch(map['nextPaymentDate']),
   userId: map['userId'],
 );
@@ -35,7 +35,7 @@ Subscription copyWith({
   String? id,
   String? name,
   double? cost,
-  List<ExpensesCategory>? cycles,
+  List<SubscriptionCycle>? cycles,
   DateTime? nextPaymentDate,
   String? userId,
  }){

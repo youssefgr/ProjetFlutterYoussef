@@ -4,7 +4,7 @@ import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'expenses_delete.dart';
-import '../expenses_edit.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses Crud/expenses_edit.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
 
 class ExpensesDetail extends StatelessWidget {

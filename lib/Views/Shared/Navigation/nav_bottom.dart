@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Home/home.dart';
 import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Expenses Crud/expenses_list.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Subscriptions Crud/subscriptions_list.dart' ;
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -12,7 +13,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList(),ExpensesList()];
+  final List<Widget> _interfaces = [const Home(), const MediaList(),const ExpensesList(),SubscriptionsList()];
 
   @override
   Widget build(BuildContext context) {
@@ -57,10 +58,10 @@ class _NavBottomState extends State<NavBottom> {
             ),
             ListTile(
               leading: const Icon(Icons.movie),
-              title: const Text("Community Management"),
+              title: const Text("Subscriptions"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 3; // MediaList index
                 });
                 Navigator.pop(context);
               },
@@ -103,7 +104,13 @@ class _NavBottomState extends State<NavBottom> {
           BottomNavigationBarItem(
             icon: Icon(Icons.monetization_on),
             label: "Expenses",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.subscript),
+            label: "Subscriptions",
           )
+
+
           /*BottomNavigationBarItem(
             icon: Icon(Icons.monetization_on),
             label: "Expenses",
