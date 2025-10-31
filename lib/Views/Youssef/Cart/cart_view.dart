@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
+import 'package:projetflutteryoussef/utils/recaptcha_service.dart';
+
 class CartView extends StatefulWidget {
   const CartView({super.key});
 
@@ -50,7 +52,8 @@ class _CartViewState extends State<CartView> {
                     ),
                     title: Text(item['title']),
                     subtitle: Text(
-                      '${item['category']}  •  ${item['price'].toStringAsFixed(2)} € each',
+                      '${item['category']}  •  ${item['price'].toStringAsFixed(
+                          2)} € each',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.remove_shopping_cart,
@@ -87,26 +90,43 @@ class _CartViewState extends State<CartView> {
             ),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () {
-              cart.clearCart();
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Purchase successful!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+            onPressed: () async {
+              String? token = await CartManager().showCaptchaDialog(context);
+              if (token != null && token.isNotEmpty) {
+                final valid = await verifyTokenOnBackend(token);
+                if (valid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('CAPTCHA validé, paiement en cours...'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  cart.clearCart();
+                  setState(() {});
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Validation server reCAPTCHA échouée'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Échec CAPTCHA ou annulé.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
-            icon: const Icon(Icons.payment, color: Colors.white),
+            icon: const Icon(Icons.payment, color: Colors.green),
             label: const Text(
               'Buy Now',
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
+
         ],
       ),
     );

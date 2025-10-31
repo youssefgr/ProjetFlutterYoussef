@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>reCAPTCHA v3</title>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LfRUfwrAAAAANDXqp1T1YAN8UrwVggR9fcPeTWB"></script>
+    <script>
+        grecaptcha.ready(function () {
+          grecaptcha.execute("6LfRUfwrAAAAANDXqp1T1YAN8UrwVggR9fcPeTWB", { action: "submit" })
+            .then(function (token) {
+              // Envoi du token à Flutter via le handler onTokenReceived
+              window.flutter_inappwebview.callHandler("onTokenReceived", token);
+            });
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

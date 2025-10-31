@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
+import 'package:projetflutteryoussef/repositories/expenses_repository.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesAdd extends StatefulWidget {
   const ExpensesAdd({super.key});
@@ -64,7 +66,9 @@ class _ExpensesAddState extends State<ExpensesAdd> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                (value == null || value.isEmpty) ? 'Please enter a title' : null,
+                (value == null || value.isEmpty)
+                    ? 'Please enter a title'
+                    : null,
               ),
               const SizedBox(height: 16),
 
@@ -77,10 +81,12 @@ class _ExpensesAddState extends State<ExpensesAdd> {
                 items: ExpensesCategory.values.map((category) {
                   return DropdownMenuItem(
                     value: category,
-                    child: Text(category.name), // utilise .name pour plus de lisibilité
+                    child: Text(
+                        category.name), // utilise .name pour plus de lisibilité
                   );
                 }).toList(),
-                onChanged: (value) => setState(() => _selectedCategory = value!),
+                onChanged: (value) =>
+                    setState(() => _selectedCategory = value!),
               ),
               const SizedBox(height: 16),
 
@@ -93,7 +99,8 @@ class _ExpensesAddState extends State<ExpensesAdd> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Enter an amount';
-                  if (double.tryParse(value) == null) return 'Enter a valid number';
+                  if (double.tryParse(value) == null)
+                    return 'Enter a valid number';
                   return null;
                 },
               ),
@@ -108,7 +115,8 @@ class _ExpensesAddState extends State<ExpensesAdd> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Enter a price';
-                  if (double.tryParse(value) == null) return 'Enter a valid number';
+                  if (double.tryParse(value) == null)
+                    return 'Enter a valid number';
                   return null;
                 },
               ),
@@ -117,7 +125,8 @@ class _ExpensesAddState extends State<ExpensesAdd> {
               ListTile(
                 title: const Text('Date'),
                 subtitle: Text(
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate
+                      .year}',
                 ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => _selectDate(context),
@@ -184,7 +193,8 @@ class _ExpensesAddState extends State<ExpensesAdd> {
               const SizedBox(width: 8),
               const Text(
                 'Image saved',
-                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.green, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -193,16 +203,18 @@ class _ExpensesAddState extends State<ExpensesAdd> {
     );
   }
 
-  Widget _buildEmptyImageState() => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.image, size: 50, color: Colors.grey[400]),
-        const SizedBox(height: 8),
-        Text('No image selected', style: TextStyle(color: Colors.grey[600])),
-      ],
-    ),
-  );
+  Widget _buildEmptyImageState() =>
+      Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image, size: 50, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+                'No image selected', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
 
   Future<void> _pickImageFromGallery() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -237,28 +249,60 @@ class _ExpensesAddState extends State<ExpensesAdd> {
       setState(() => _selectedDate = picked);
     }
   }
+  Future<void> _saveExpense() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  void _saveExpense() {
-    if (_formKey.currentState!.validate()) {
-      final newExpense = Expenses(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text,
-        category: _selectedCategory,
-        date: _selectedDate,
-        amount: double.parse(_amountController.text),
-        price: double.parse(_priceController.text),
-        imageURL: _savedImagePath ?? '',
-        userId: 'current_user', // a remplacer plus tard
+    final newExpense = Expenses(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text,
+      category: _selectedCategory,
+      date: _selectedDate,
+      amount: double.parse(_amountController.text),
+      price: double.parse(_priceController.text),
+      imageURL: _savedImagePath ?? '',
+      userId: Supabase.instance.client.auth.currentUser?.id ?? 'anonymous',
+    );
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      final data = await Supabase.instance.client
+          .from('Expenses')
+          .upsert({
+        'id': newExpense.id,
+        'title': newExpense.title,
+        'category': newExpense.category.name,
+        'date': newExpense.date.toIso8601String(),
+        'amount': newExpense.amount,
+        'price': newExpense.price,
+        'imageURL': newExpense.imageURL,
+        'userId': newExpense.userId,
+      });
+
+      // Si on arrive ici, insertion réussie
+      await ExpensesRepository.saveExpenses([newExpense]);
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Expense added successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      _showSnackBar('Expense added successfully!', Colors.green);
       Navigator.pop(context, newExpense);
+    } catch (e, stackTrace) {
+      print('Erreur lors de l\'enregistrement: $e');
+      print('Stack trace: $stackTrace');
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de l\'enregistrement: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
-  }
+
+
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesRepository {
   static const String _fileName = 'expenses_data.json';
@@ -71,5 +72,27 @@ class ExpensesRepository {
       imageURL: json['imageURL'],
       userId: json['userId'],
     );
+  }
+}
+
+Future<void> addExpenseToDatabase(Expenses expense) async {
+  final response = await Supabase.instance.client
+      .from('Expenses')
+      .upsert({
+    'id': expense.id,
+    'title': expense.title,
+    'category': expense.category.name, // adapte si besoin
+    'date': expense.date.toIso8601String(),
+    'amount': expense.amount,
+    'price': expense.price,
+    'imageURL': expense.imageURL,
+    'userId': expense.userId,
+  });
+
+
+  if (response.error != null) {
+    // Gérer l'erreur
+    print('Erreur d\'enregistrement : ${response.error!.message}');
+    throw response.error!;
   }
 }
