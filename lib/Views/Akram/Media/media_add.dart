@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../Models/Akram/media_models.dart';
+import '../../../repositories/Akram/media_repository.dart';
 import '../../../utils/image_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,10 +21,10 @@ class _MediaAddState extends State<MediaAdd> {
   MediaCategory _selectedCategory = MediaCategory.film;
   MediaViewStatus _selectedStatus = MediaViewStatus.toView;
   DateTime _selectedDate = DateTime.now();
-  final List<MediaGenre> _selectedGenres = [];
+  MediaGenre _selectedGenre = MediaGenre.action; // Changed from list to single value
 
   File? _selectedImage;
-  String? _savedImageName; // Store just the image name with extension
+  String? _savedImageName;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -75,7 +76,7 @@ class _MediaAddState extends State<MediaAdd> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaCategory>(
-                initialValue: _selectedCategory,
+                value: _selectedCategory,
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value!;
@@ -95,7 +96,7 @@ class _MediaAddState extends State<MediaAdd> {
               const SizedBox(height: 16),
 
               DropdownButtonFormField<MediaViewStatus>(
-                initialValue: _selectedStatus,
+                value: _selectedStatus,
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value!;
@@ -114,35 +115,32 @@ class _MediaAddState extends State<MediaAdd> {
               ),
               const SizedBox(height: 16),
 
+              // Genre dropdown (single selection)
+              DropdownButtonFormField<MediaGenre>(
+                value: _selectedGenre,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGenre = value!;
+                  });
+                },
+                items: MediaGenre.values.map((genre) {
+                  return DropdownMenuItem(
+                    value: genre,
+                    child: Text(genre.toString().split('.').last),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Genre',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               ListTile(
                 title: const Text('Release Date'),
                 subtitle: Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => _selectDate(context),
-              ),
-              const SizedBox(height: 16),
-
-              const Text('Genres:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 4.0,
-                children: MediaGenre.values.map((genre) {
-                  return FilterChip(
-                    label: Text(genre.toString().split('.').last),
-                    selected: _selectedGenres.contains(genre),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedGenres.add(genre);
-                        } else {
-                          _selectedGenres.remove(genre);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
               ),
             ],
           ),
@@ -194,18 +192,6 @@ class _MediaAddState extends State<MediaAdd> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            /*Expanded(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.photo_camera),
-                label: const Text('Camera'),
-                onPressed: _takePhotoWithCamera,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),*/
           ],
         ),
 
@@ -274,25 +260,13 @@ class _MediaAddState extends State<MediaAdd> {
     }
   }
 
-  /*Future<void> _takePhotoWithCamera() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-      if (image != null) {
-        await _processSelectedImage(File(image.path), image.name);
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to take photo: $e');
-    }
-  }*/
-
   Future<void> _processSelectedImage(File imageFile, String originalName) async {
     try {
-      // Save image to app directory
       final String _ = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
 
       setState(() {
         _selectedImage = imageFile;
-        _savedImageName = originalName; // Store the image name with extension
+        _savedImageName = originalName;
       });
 
       _showSuccessSnackBar('Image saved successfully: $originalName');
@@ -326,25 +300,6 @@ class _MediaAddState extends State<MediaAdd> {
     );
   }
 
-  /*void _saveMedia() {
-    if (_formKey.currentState!.validate()) {
-      final newItem = MediaItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        category: _selectedCategory,
-        title: _titleController.text,
-        imageUrl: _savedImageName ?? '',
-        releaseDate: _selectedDate,
-        description: _descriptionController.text,
-        status: _selectedStatus,
-        genres: _selectedGenres,
-        userId: Supabase.instance.client.auth.currentUser?.id ?? 'anonymous',
-
-      );
-
-      _showSuccessSnackBar('Media added successfully!');
-      Navigator.pop(context, newItem); // Return the item, don't save here
-    }
-  }*/
   Future<void> _saveMedia() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -355,7 +310,7 @@ class _MediaAddState extends State<MediaAdd> {
       releaseDate: _selectedDate,
       description: _descriptionController.text,
       status: _selectedStatus,
-      genres: _selectedGenres,
+      genre: _selectedGenre, // Single genre
       imageUrl: _savedImageName ?? '',
       userId: Supabase.instance.client.auth.currentUser?.id ?? 'anonymous',
     );
@@ -363,22 +318,7 @@ class _MediaAddState extends State<MediaAdd> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
-      final data = await Supabase.instance.client
-          .from('Media') // Adjust table name if different
-          .upsert({
-        'id': newMedia.id,
-        'title': newMedia.title,
-        'category': newMedia.category.name,
-        'releaseDate': newMedia.releaseDate.toIso8601String(),
-        'description': newMedia.description,
-        'status': newMedia.status.name,
-        'genres': newMedia.genres.map((genre) => genre.name).toList(),
-        'imageUrl': newMedia.imageUrl,
-        'userId': newMedia.userId,
-      });
-
-      // If you have a MediaRepository equivalent
-      // await MediaRepository.saveMedia([newMedia]);
+      await MediaRepository.addMediaItem(newMedia);
 
       scaffoldMessenger.showSnackBar(
         const SnackBar(
@@ -389,12 +329,12 @@ class _MediaAddState extends State<MediaAdd> {
 
       Navigator.pop(context, newMedia);
     } catch (e, stackTrace) {
-      print('Erreur lors de l\'enregistrement: $e');
+      print('Error saving media: $e');
       print('Stack trace: $stackTrace');
 
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('Erreur lors de l\'enregistrement: $e'),
+          content: Text('Error saving media: $e'),
           backgroundColor: Colors.red,
         ),
       );

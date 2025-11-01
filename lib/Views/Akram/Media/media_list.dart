@@ -34,17 +34,25 @@ class _MediaListState extends State<MediaList> {
   }
 
   void _onMediaItemsUpdated() {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadMediaItems() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
     await _viewModel.loadMediaItems();
-    setState(() {
-      _isLoading = false;
-    });
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -61,7 +69,6 @@ class _MediaListState extends State<MediaList> {
       appBar: AppBar(
         title: const Text('Media Collection'),
         actions: [
-          // Search Icon
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
@@ -73,7 +80,6 @@ class _MediaListState extends State<MediaList> {
               });
             },
           ),
-          // Filter Icon
           IconButton(
             icon: Stack(
               children: [
@@ -98,41 +104,39 @@ class _MediaListState extends State<MediaList> {
             ),
             onPressed: _showFilterDialog,
           ),
-          // Add Icon
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const MediaAdd()),
-              ).then((newItem) {
-                if (newItem != null) {
-                  _viewModel.addMediaItem(newItem);
-                }
-              });
+              );
+              // Always reload data when returning from add screen
+              await _loadMediaItems();
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // Search Bar
           if (_showFilters) _buildSearchBar(),
-          // Active Filters Indicator
           if (_viewModel.hasActiveFilters) _buildActiveFiltersIndicator(),
-          // Media Sections
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  _buildHorizontalSection(MediaViewStatus.toView, 'To View', Colors.orange),
-                  const SizedBox(height: 16),
-                  _buildHorizontalSection(MediaViewStatus.viewing, 'Viewing', Colors.blue),
-                  const SizedBox(height: 16),
-                  _buildHorizontalSection(MediaViewStatus.viewed, 'Viewed', Colors.green),
-                  const SizedBox(height: 16),
-                ],
+            child: RefreshIndicator(
+              onRefresh: _loadMediaItems,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(MediaViewStatus.toView, 'To View', Colors.orange),
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(MediaViewStatus.viewing, 'Viewing', Colors.blue),
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(MediaViewStatus.viewed, 'Viewed', Colors.green),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
           ),
@@ -209,13 +213,12 @@ class _MediaListState extends State<MediaList> {
     final sectionItems = _viewModel.getItemsByStatus(status);
 
     if (sectionItems.isEmpty && _viewModel.hasActiveFilters) {
-      return const SizedBox.shrink(); // Hide empty sections when filtering
+      return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -228,7 +231,6 @@ class _MediaListState extends State<MediaList> {
           ),
         ),
         const SizedBox(height: 8),
-        // Horizontal Scrollable Row with Drag Target
         Container(
           height: 180,
           child: DragTarget<MediaItem>(
@@ -304,8 +306,8 @@ class _MediaListState extends State<MediaList> {
           child: MediaGridItem(
             item: item,
             sectionColor: color,
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => MediaDetail(
@@ -319,6 +321,8 @@ class _MediaListState extends State<MediaList> {
                   ),
                 ),
               );
+              // Reload data when returning from detail screen
+              await _loadMediaItems();
             },
           ),
         );
@@ -327,7 +331,7 @@ class _MediaListState extends State<MediaList> {
   }
 }
 
-// Filter Dialog Widget
+// Filter Dialog Widget (unchanged)
 class FilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;
   final VoidCallback onFiltersChanged;
@@ -345,15 +349,14 @@ class FilterDialog extends StatefulWidget {
 class _FilterDialogState extends State<FilterDialog> {
   MediaCategory? _selectedCategory;
   MediaViewStatus? _selectedStatus;
-  List<MediaGenre> _selectedGenres = [];
+  MediaGenre? _selectedGenre; // Changed from list to single value
 
   @override
   void initState() {
     super.initState();
-    // Initialize with current filter states using getters
     _selectedCategory = widget.viewModel.selectedCategory;
     _selectedStatus = widget.viewModel.selectedStatus;
-    _selectedGenres = List.from(widget.viewModel.selectedGenres);
+    _selectedGenre = widget.viewModel.selectedGenre; // Changed
   }
 
   @override
@@ -371,7 +374,6 @@ class _FilterDialogState extends State<FilterDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category Filter
             const Text('Category', style: TextStyle(fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
@@ -389,7 +391,6 @@ class _FilterDialogState extends State<FilterDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Status Filter
             const Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
@@ -407,21 +408,16 @@ class _FilterDialogState extends State<FilterDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Genre Filter
-            const Text('Genres', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Genre', style: TextStyle(fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
               children: MediaGenre.values.map((genre) {
                 return FilterChip(
                   label: Text(genre.toString().split('.').last),
-                  selected: _selectedGenres.contains(genre),
+                  selected: _selectedGenre == genre,
                   onSelected: (selected) {
                     setState(() {
-                      if (selected) {
-                        _selectedGenres.add(genre);
-                      } else {
-                        _selectedGenres.remove(genre);
-                      }
+                      _selectedGenre = selected ? genre : null;
                     });
                   },
                 );
@@ -433,11 +429,10 @@ class _FilterDialogState extends State<FilterDialog> {
       actions: [
         TextButton(
           onPressed: () {
-            // Clear all filters
             setState(() {
               _selectedCategory = null;
               _selectedStatus = null;
-              _selectedGenres.clear();
+              _selectedGenre = null;
             });
           },
           child: const Text('Clear All'),
@@ -450,26 +445,9 @@ class _FilterDialogState extends State<FilterDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            // Apply filters using public methods
             widget.viewModel.setCategoryFilter(_selectedCategory);
             widget.viewModel.setStatusFilter(_selectedStatus);
-
-            // Update genre filters
-            final currentGenres = widget.viewModel.selectedGenres;
-
-            // Remove genres that are no longer selected
-            for (final genre in currentGenres) {
-              if (!_selectedGenres.contains(genre)) {
-                widget.viewModel.toggleGenreFilter(genre);
-              }
-            }
-
-            // Add newly selected genres
-            for (final genre in _selectedGenres) {
-              if (!currentGenres.contains(genre)) {
-                widget.viewModel.toggleGenreFilter(genre);
-              }
-            }
+            widget.viewModel.setGenreFilter(_selectedGenre);
 
             widget.onFiltersChanged();
             Navigator.pop(context);

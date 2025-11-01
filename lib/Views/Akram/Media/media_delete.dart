@@ -70,12 +70,21 @@ class MediaDelete extends StatelessWidget {
               await ImageUtils.deleteImage(mediaItem.imageUrl);
             }
 
+            // Call the delete callback
             onDelete();
+
+            // Close the delete dialog
             Navigator.pop(context);
+
+            // Navigate back to MediaList (pop the MediaDetail screen)
+            Navigator.pop(context);
+
+            // Show success message on MediaList
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('"${mediaItem.title}" deleted successfully'),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
               ),
             );
           },

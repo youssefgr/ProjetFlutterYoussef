@@ -1,6 +1,5 @@
 import '../../Models/Akram/media_models.dart';
 import '../../repositories/Akram/media_repository.dart';
-import '../../utils/image_utils.dart';
 
 class MediaViewModel {
   List<MediaItem> _mediaItems = [];
@@ -10,13 +9,13 @@ class MediaViewModel {
   String _searchQuery = '';
   MediaCategory? _selectedCategory;
   MediaViewStatus? _selectedStatus;
-  final List<MediaGenre> _selectedGenres = [];
+  MediaGenre? _selectedGenre; // Changed from List to single value
 
   // Getters for filter states
   String get searchQuery => _searchQuery;
   MediaCategory? get selectedCategory => _selectedCategory;
   MediaViewStatus? get selectedStatus => _selectedStatus;
-  List<MediaGenre> get selectedGenres => List.from(_selectedGenres);
+  MediaGenre? get selectedGenre => _selectedGenre; // Changed
 
   // State management callbacks
   Function()? onMediaItemsUpdated;
@@ -35,9 +34,8 @@ class MediaViewModel {
       // Status filter
       final matchesStatus = _selectedStatus == null || item.status == _selectedStatus;
 
-      // Genre filter
-      final matchesGenre = _selectedGenres.isEmpty ||
-          item.genres.any((genre) => _selectedGenres.contains(genre));
+      // Genre filter (single value now)
+      final matchesGenre = _selectedGenre == null || item.genre == _selectedGenre;
 
       return matchesSearch && matchesCategory && matchesStatus && matchesGenre;
     }).toList();
@@ -65,19 +63,15 @@ class MediaViewModel {
     onMediaItemsUpdated?.call();
   }
 
-  void toggleGenreFilter(MediaGenre genre) {
-    if (_selectedGenres.contains(genre)) {
-      _selectedGenres.remove(genre);
-    } else {
-      _selectedGenres.add(genre);
-    }
+  void setGenreFilter(MediaGenre? genre) {
+    _selectedGenre = genre;
     onMediaItemsUpdated?.call();
   }
 
   void clearAllFilters() {
     _selectedCategory = null;
     _selectedStatus = null;
-    _selectedGenres.clear();
+    _selectedGenre = null;
     _searchQuery = '';
     onMediaItemsUpdated?.call();
   }
@@ -87,7 +81,7 @@ class MediaViewModel {
     return _searchQuery.isNotEmpty ||
         _selectedCategory != null ||
         _selectedStatus != null ||
-        _selectedGenres.isNotEmpty;
+        _selectedGenre != null;
   }
 
   String get activeFiltersDescription {
@@ -95,48 +89,65 @@ class MediaViewModel {
     if (_searchQuery.isNotEmpty) filters.add('Search: "$_searchQuery"');
     if (_selectedCategory != null) filters.add('Category: ${_selectedCategory.toString().split('.').last}');
     if (_selectedStatus != null) filters.add('Status: ${_selectedStatus.toString().split('.').last}');
-    if (_selectedGenres.isNotEmpty) {
-      filters.add('Genres: ${_selectedGenres.map((g) => g.toString().split('.').last).join(', ')}');
-    }
+    if (_selectedGenre != null) filters.add('Genre: ${_selectedGenre.toString().split('.').last}');
     return filters.join(' • ');
   }
 
+  // Load media items from Supabase
   Future<void> loadMediaItems() async {
-    _mediaItems = await MediaRepository.loadMediaItems();
-    onMediaItemsUpdated?.call();
+    try {
+      _mediaItems = await MediaRepository.loadMediaItems();
+      onMediaItemsUpdated?.call();
+    } catch (e) {
+      print('Error loading media items: $e');
+    }
   }
 
+  // Add media item to Supabase
   Future<void> addMediaItem(MediaItem item) async {
-    _mediaItems.add(item);
-    await MediaRepository.saveMediaItems(_mediaItems);
-    onMediaItemsUpdated?.call();
+    try {
+      await MediaRepository.addMediaItem(item);
+      await loadMediaItems();
+    } catch (e) {
+      print('Error adding media item: $e');
+      rethrow;
+    }
   }
 
+  // Update media item in Supabase
   Future<void> updateMediaItem(MediaItem updatedItem) async {
-    final index = _mediaItems.indexWhere((item) => item.id == updatedItem.id);
-    if (index != -1) {
-      _mediaItems[index] = updatedItem;
-      await MediaRepository.saveMediaItems(_mediaItems);
-      onMediaItemsUpdated?.call();
+    try {
+      await MediaRepository.updateMediaItem(updatedItem);
+      await loadMediaItems();
+    } catch (e) {
+      print('Error updating media item: $e');
+      rethrow;
     }
   }
 
+  // Delete media item from Supabase
   Future<void> deleteMediaItem(String id) async {
-    final item = _mediaItems.firstWhere((item) => item.id == id);
-    if (item.imageUrl.isNotEmpty) {
-      await ImageUtils.deleteImage(item.imageUrl);
+    try {
+      await MediaRepository.deleteMediaItem(id);
+      await loadMediaItems();
+    } catch (e) {
+      print('Error deleting media item: $e');
+      rethrow;
     }
-    _mediaItems.removeWhere((item) => item.id == id);
-    await MediaRepository.saveMediaItems(_mediaItems);
-    onMediaItemsUpdated?.call();
   }
 
+  // Update media status in Supabase
   Future<void> updateMediaStatus(String itemId, MediaViewStatus newStatus) async {
-    final index = _mediaItems.indexWhere((item) => item.id == itemId);
-    if (index != -1) {
-      _mediaItems[index] = _mediaItems[index].copyWith(status: newStatus);
-      await MediaRepository.saveMediaItems(_mediaItems);
-      onMediaItemsUpdated?.call();
+    try {
+      final index = _mediaItems.indexWhere((item) => item.id == itemId);
+      if (index != -1) {
+        final updatedItem = _mediaItems[index].copyWith(status: newStatus);
+        await MediaRepository.updateMediaItem(updatedItem);
+        await loadMediaItems();
+      }
+    } catch (e) {
+      print('Error updating media status: $e');
+      rethrow;
     }
   }
 

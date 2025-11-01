@@ -8,7 +8,7 @@ class MediaItem {
   final DateTime releaseDate;
   final String description;
   final MediaViewStatus status;
-  final List<MediaGenre> genres;
+  final MediaGenre genre;
   final String userId;
 
   MediaItem({
@@ -19,7 +19,7 @@ class MediaItem {
     required this.releaseDate,
     required this.description,
     required this.status,
-    required this.genres,
+    required this.genre, // Single genre
     required this.userId,
   });
 
@@ -32,7 +32,7 @@ class MediaItem {
       'releaseDate': releaseDate.millisecondsSinceEpoch,
       'description': description,
       'status': status.index,
-      'genres': genres.map((genre) => genre.index).toList(),
+      'genre': genre.index, // Store as index
       'userId': userId,
     };
   }
@@ -46,7 +46,7 @@ class MediaItem {
       releaseDate: DateTime.fromMillisecondsSinceEpoch(map['releaseDate']),
       description: map['description'],
       status: MediaViewStatus.values[map['status']],
-      genres: (map['genres'] as List).map((index) => MediaGenre.values[index]).toList(),
+      genre: MediaGenre.values[map['genre']], // Single genre
       userId: map['userId'],
     );
   }
@@ -59,7 +59,7 @@ class MediaItem {
     DateTime? releaseDate,
     String? description,
     MediaViewStatus? status,
-    List<MediaGenre>? genres,
+    MediaGenre? genre,
     String? userId,
   }) {
     return MediaItem(
@@ -70,7 +70,7 @@ class MediaItem {
       releaseDate: releaseDate ?? this.releaseDate,
       description: description ?? this.description,
       status: status ?? this.status,
-      genres: genres ?? this.genres,
+      genre: genre ?? this.genre, // Single genre
       userId: userId ?? this.userId,
     );
   }

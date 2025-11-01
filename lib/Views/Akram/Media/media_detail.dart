@@ -38,22 +38,6 @@ class _MediaDetailState extends State<MediaDetail> {
         title: Text(widget.mediaItem.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MediaEdit(mediaItem: widget.mediaItem),
-                ),
-              ).then((updatedItem) {
-                if (updatedItem != null && widget.onUpdate != null) {
-                  widget.onUpdate!(updatedItem);
-                  Navigator.pop(context, updatedItem);
-                }
-              });
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () {
               showDialog(
@@ -90,32 +74,35 @@ class _MediaDetailState extends State<MediaDetail> {
             ),
             const SizedBox(height: 16),
 
-            // Category and Status
-            Row(
+            // Category, Status, and Genre chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _buildInfoChip(
                   'Category',
                   widget.mediaItem.category.toString().split('.').last,
                   Colors.blue,
                 ),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                   'Status',
                   widget.mediaItem.status.toString().split('.').last,
                   _getStatusColor(widget.mediaItem.status),
+                ),
+                _buildInfoChip(
+                  'Genre',
+                  widget.mediaItem.genre.toString().split('.').last,
+                  Colors.purple,
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
             // Release Date
-            _buildInfoRow('Release Date',
-                '${widget.mediaItem.releaseDate.day}/${widget.mediaItem.releaseDate.month}/${widget.mediaItem.releaseDate.year}'),
-            const SizedBox(height: 16),
-
-            // Genres
-            _buildInfoRow('Genres',
-                widget.mediaItem.genres.map((g) => g.toString().split('.').last).join(', ')),
+            _buildInfoRow(
+              'Release Date',
+              '${widget.mediaItem.releaseDate.day}/${widget.mediaItem.releaseDate.month}/${widget.mediaItem.releaseDate.year}',
+            ),
             const SizedBox(height: 16),
 
             // Description
@@ -128,12 +115,14 @@ class _MediaDetailState extends State<MediaDetail> {
             ),
             const SizedBox(height: 8),
             Text(
-              widget.mediaItem.description.isEmpty ? 'No description available' : widget.mediaItem.description,
+              widget.mediaItem.description.isEmpty
+                  ? 'No description available'
+                  : widget.mediaItem.description,
               style: const TextStyle(fontSize: 16, height: 1.5),
             ),
             const SizedBox(height: 24),
 
-            // Comments Section (Separated Component)
+            // Comments Section
             MediaCommentDetail(
               mediaItemId: widget.mediaItem.id,
               mediaTitle: widget.mediaItem.title,
