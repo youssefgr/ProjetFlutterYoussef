@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
-import '../../../utils/image_utils.dart';
 import '../../../viewmodels/Akram/media_comment_viewmodel.dart';
 import '../Comment/media_comment_views.dart';
 import 'media_views.dart';
@@ -61,7 +60,6 @@ class _MediaDetailState extends State<MediaDetail> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Poster Image
-            _buildPosterImage(),
             const SizedBox(height: 24),
 
             // Title
@@ -134,102 +132,6 @@ class _MediaDetailState extends State<MediaDetail> {
     );
   }
 
-  Widget _buildPosterImage() {
-    if (widget.mediaItem.imageUrl.isEmpty) {
-      return Container(
-        width: double.infinity,
-        height: 300,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.movie, size: 80, color: Colors.grey),
-            SizedBox(height: 8),
-            Text(
-              'No Image',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(widget.mediaItem.imageUrl),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
-                  'Loading image...',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          return Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                snapshot.data!,
-                width: double.infinity,
-                height: 300,
-                fit: BoxFit.cover,
-              ),
-            ),
-          );
-        }
-
-        return Container(
-          width: double.infinity,
-          height: 300,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.broken_image, size: 80, color: Colors.grey),
-              SizedBox(height: 8),
-              Text(
-                'Image not found',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildInfoChip(String label, String value, Color color) {
     return Chip(

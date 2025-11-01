@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
-import '../../../utils/image_utils.dart';
 
 class MediaGridItem extends StatefulWidget {
   final MediaItem item;
@@ -69,7 +68,7 @@ class _MediaGridItemState extends State<MediaGridItem> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildItemImage(40, forDrag: true),
+           ?null,
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -140,7 +139,7 @@ class _MediaGridItemState extends State<MediaGridItem> {
                       topRight: Radius.circular(8),
                     ),
                   ),
-                  child: _buildItemImage(0, forDrag: false),
+                  child: null,
                 ),
                 // Text content
                 Expanded(
@@ -183,39 +182,7 @@ class _MediaGridItemState extends State<MediaGridItem> {
     );
   }
 
-  Widget _buildItemImage(double size, {bool forDrag = false}) {
-    return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(widget.item.imageUrl),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: Icon(Icons.movie, size: 30, color: widget.sectionColor),
-          );
-        }
 
-        if (snapshot.hasData && snapshot.data != null) {
-          return ClipRRect(
-            borderRadius: forDrag
-                ? BorderRadius.circular(4)
-                : const BorderRadius.only(
-              topLeft: Radius.circular(8),
-              topRight: Radius.circular(8),
-            ),
-            child: Image.file(
-              snapshot.data!,
-              width: forDrag ? size : double.infinity,
-              height: forDrag ? size : double.infinity,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-
-        return Center(
-          child: Icon(Icons.movie, size: 30, color: widget.sectionColor),
-        );
-      },
-    );
-  }
 
   String _truncateTitle(String title, int maxLength) {
     if (title.length <= maxLength) return title;

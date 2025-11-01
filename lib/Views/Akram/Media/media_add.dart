@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../repositories/Akram/media_repository.dart';
-import '../../../utils/image_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MediaAdd extends StatefulWidget {
@@ -185,7 +184,7 @@ class _MediaAddState extends State<MediaAdd> {
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Gallery'),
-                onPressed: _pickImageFromGallery,
+                onPressed: null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -247,32 +246,6 @@ class _MediaAddState extends State<MediaAdd> {
         ],
       ),
     );
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        await _processSelectedImage(File(image.path), image.name);
-      }
-    } catch (e) {
-      _showErrorSnackBar('Failed to pick image: $e');
-    }
-  }
-
-  Future<void> _processSelectedImage(File imageFile, String originalName) async {
-    try {
-      final String _ = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
-
-      setState(() {
-        _selectedImage = imageFile;
-        _savedImageName = originalName;
-      });
-
-      _showSuccessSnackBar('Image saved successfully: $originalName');
-    } catch (e) {
-      _showErrorSnackBar('Failed to save image: $e');
-    }
   }
 
   void _removeImage() {
