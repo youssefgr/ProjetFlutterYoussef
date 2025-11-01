@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../..//Home/home.dart';
+import '../../Akram/Media/media_home.dart';
 import '../../Akram/Media/media_list.dart';
 
 class NavBottom extends StatefulWidget {
@@ -11,7 +12,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList()];
+  final List<Widget> _interfaces = const [Home(), MediaList(), MediaHome()];
 
   @override
   Widget build(BuildContext context) {
@@ -98,11 +99,11 @@ class _NavBottomState extends State<NavBottom> {
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
             label: "Media",
-          )
-          /*BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on),
-            label: "Expenses",
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.movie),
+            label: "Media Home",
+          ),/*
           BottomNavigationBarItem(
             icon: Icon(Icons.subscript),
             label: "Subscription",
