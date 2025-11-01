@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../Models/Akram/media_models.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MediaRepository {
   static const String _fileName = 'media_data.json';
@@ -55,6 +56,7 @@ class MediaRepository {
       'description': item.description,
       'status': item.status.index,
       'genres': item.genres.map((genre) => genre.index).toList(),
+      'userId': item.userId,
     };
   }
 
@@ -69,6 +71,31 @@ class MediaRepository {
       description: json['description'],
       status: MediaViewStatus.values[json['status']],
       genres: (json['genres'] as List).map((index) => MediaGenre.values[index]).toList(),
+      userId: json['userId'],
     );
+  }
+
+  static Future<void> addMediaToDatabase(MediaItem mediaItem) async {
+    final response = await Supabase.instance.client
+        .from('Media') // Adjust table name as needed
+        .upsert({
+      'id': mediaItem.id,
+      'category': mediaItem.category.index, // Store as integer index
+      'title': mediaItem.title,
+      'posterUrl': mediaItem.imageUrl, // Using imageUrl field
+      'releaseDate': mediaItem.releaseDate.toIso8601String(),
+      'description': mediaItem.description,
+      'status': mediaItem.status.index, // Store as integer index
+      'genres': mediaItem.genres.map((genre) => genre.index).toList(), // Store as list of integers
+      'userId': mediaItem.userId,
+    });
+
+    if (response.error != null) {
+      // Handle error
+      if (kDebugMode) {
+        print('Error saving media: ${response.error!.message}');
+      }
+      throw response.error!;
+    }
   }
 }

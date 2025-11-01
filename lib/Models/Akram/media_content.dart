@@ -9,6 +9,7 @@ class MediaItem {
   final String description;
   final MediaViewStatus status;
   final List<MediaGenre> genres;
+  final String userId;
 
   MediaItem({
     required this.id,
@@ -19,6 +20,7 @@ class MediaItem {
     required this.description,
     required this.status,
     required this.genres,
+    required this.userId,
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class MediaItem {
       'description': description,
       'status': status.index,
       'genres': genres.map((genre) => genre.index).toList(),
+      'userId': userId,
     };
   }
 
@@ -44,6 +47,7 @@ class MediaItem {
       description: map['description'],
       status: MediaViewStatus.values[map['status']],
       genres: (map['genres'] as List).map((index) => MediaGenre.values[index]).toList(),
+      userId: map['userId'],
     );
   }
 
@@ -56,6 +60,7 @@ class MediaItem {
     String? description,
     MediaViewStatus? status,
     List<MediaGenre>? genres,
+    String? userId,
   }) {
     return MediaItem(
       id: id ?? this.id,
@@ -66,6 +71,7 @@ class MediaItem {
       description: description ?? this.description,
       status: status ?? this.status,
       genres: genres ?? this.genres,
+      userId: userId ?? this.userId,
     );
   }
 }

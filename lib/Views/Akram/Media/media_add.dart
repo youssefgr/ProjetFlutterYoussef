@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../utils/image_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MediaAdd extends StatefulWidget {
   const MediaAdd({super.key});
@@ -325,7 +326,7 @@ class _MediaAddState extends State<MediaAdd> {
     );
   }
 
-  void _saveMedia() {
+  /*void _saveMedia() {
     if (_formKey.currentState!.validate()) {
       final newItem = MediaItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -336,10 +337,67 @@ class _MediaAddState extends State<MediaAdd> {
         description: _descriptionController.text,
         status: _selectedStatus,
         genres: _selectedGenres,
+        userId: Supabase.instance.client.auth.currentUser?.id ?? 'anonymous',
+
       );
 
       _showSuccessSnackBar('Media added successfully!');
       Navigator.pop(context, newItem); // Return the item, don't save here
+    }
+  }*/
+  Future<void> _saveMedia() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final newMedia = MediaItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text,
+      category: _selectedCategory,
+      releaseDate: _selectedDate,
+      description: _descriptionController.text,
+      status: _selectedStatus,
+      genres: _selectedGenres,
+      imageUrl: _savedImageName ?? '',
+      userId: Supabase.instance.client.auth.currentUser?.id ?? 'anonymous',
+    );
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      final data = await Supabase.instance.client
+          .from('Media') // Adjust table name if different
+          .upsert({
+        'id': newMedia.id,
+        'title': newMedia.title,
+        'category': newMedia.category.name,
+        'releaseDate': newMedia.releaseDate.toIso8601String(),
+        'description': newMedia.description,
+        'status': newMedia.status.name,
+        'genres': newMedia.genres.map((genre) => genre.name).toList(),
+        'imageUrl': newMedia.imageUrl,
+        'userId': newMedia.userId,
+      });
+
+      // If you have a MediaRepository equivalent
+      // await MediaRepository.saveMedia([newMedia]);
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Media added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context, newMedia);
+    } catch (e, stackTrace) {
+      print('Erreur lors de l\'enregistrement: $e');
+      print('Stack trace: $stackTrace');
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de l\'enregistrement: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
