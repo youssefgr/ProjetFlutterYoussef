@@ -9,9 +9,9 @@ class CartView extends StatefulWidget {
   State<CartView> createState() => _CartViewState();
 }
 
-
 class _CartViewState extends State<CartView> {
-  final CartManager cart = CartManager(); // Access the global instance
+  final CartManager cart = CartManager();
+  bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +42,8 @@ class _CartViewState extends State<CartView> {
               itemBuilder: (context, index) {
                 final item = cart.cartItems[index];
                 return Card(
-                  margin:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.lightBlueAccent,
@@ -52,8 +52,7 @@ class _CartViewState extends State<CartView> {
                     ),
                     title: Text(item['title']),
                     subtitle: Text(
-                      '${item['category']}  •  ${item['price'].toStringAsFixed(
-                          2)} € each',
+                      '${item['category']}  •  ${item['price'].toStringAsFixed(2)} € each',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.remove_shopping_cart,
@@ -90,45 +89,109 @@ class _CartViewState extends State<CartView> {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () async {
-              String? token = await CartManager().showCaptchaDialog(context);
-              if (token != null && token.isNotEmpty) {
-                final valid = await verifyTokenOnBackend(token);
-                if (valid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('CAPTCHA validé, paiement en cours...'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  cart.clearCart();
-                  setState(() {});
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Validation server reCAPTCHA échouée'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Échec CAPTCHA ou annulé.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.payment, color: Colors.green),
-            label: const Text(
-              'Buy Now',
-              style: TextStyle(color: Colors.white, fontSize: 16),
+            onPressed: _isProcessing ? null : _handlePurchase,
+            icon: _isProcessing
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+                : const Icon(Icons.payment, color: Colors.white),
+            label: Text(
+              _isProcessing ? 'Processing...' : 'Buy Now',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isProcessing ? Colors.grey : Colors.green,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
-
         ],
       ),
     );
+  }
+
+  Future<void> _handlePurchase() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      print('🛒 Initiating purchase...');
+
+      // Show reCAPTCHA v2 dialog
+      String? token = await cart.showCaptchaDialog(context);
+
+      if (!mounted) return;
+
+      if (token != null && token.isNotEmpty) {
+        // Show verifying message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Text('Verifying with server...'),
+              ],
+            ),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Verify token on backend
+        final valid = await verifyRecaptchaV2Token(token);
+
+        if (!mounted) return;
+
+        if (valid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Payment processing successful!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          cart.clearCart();
+          setState(() {});
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Server verification failed. Please try again.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('CAPTCHA verification cancelled'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 }

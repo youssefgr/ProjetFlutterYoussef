@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gcaptcha_v3/recaptca_config.dart';
 import 'package:projetflutteryoussef/Views/Shared/Navigation/nav_bottom.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:projetflutteryoussef/utils/recaptcha_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

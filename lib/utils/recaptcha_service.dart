@@ -1,23 +1,43 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-Future<bool> verifyTokenOnBackend(String token) async {
-  final supabase = Supabase.instance.client;
-  final accessToken = supabase.auth.currentSession?.accessToken;
+// Verify reCAPTCHA v2 token on backend
+Future<bool> verifyRecaptchaV2Token(String token) async {
+  try {
+    final supabase = Supabase.instance.client;
 
-  final response = await http.post(
-    Uri.parse('https://dcpztcjhgbekbadfosvt.supabase.co/functions/v1/Captcha_function'),
-    headers: {
-      'Content-Type': 'application/json',
-      if (accessToken != null) 'Authorization': 'Bearer $accessToken',
-    },
-    body: jsonEncode({'token': token}),
-  );
+    print('🔐 Verifying reCAPTCHA v2 token with backend...');
+    print('📤 Token (first 30 chars): ${token.substring(0, 30)}...');
 
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return data['success'] == true;
+    final response = await supabase.functions.invoke(
+      'Captcha_function',
+      body: {'token': token},
+    );
+
+    print('📡 Response status: ${response.status}');
+    print('📡 Response data: ${response.data}');
+
+    if (response.status == 200) {
+      final data = response.data;
+      final success = data['success'] == true;
+
+      if (success) {
+        print('✅ CAPTCHA v2 verification successful');
+      } else {
+        print('❌ CAPTCHA v2 verification failed');
+        print('❌ Reason: ${data['message']}');
+        if (data['error-codes'] != null) {
+          print('❌ Error codes: ${data['error-codes']}');
+        }
+      }
+
+      return success;
+    } else {
+      print('❌ Backend returned error status: ${response.status}');
+      return false;
+    }
+  } catch (e, stackTrace) {
+    print('❌ Error verifying CAPTCHA: $e');
+    print('❌ Stack trace: $stackTrace');
+    return false;
   }
-  return false;
 }
