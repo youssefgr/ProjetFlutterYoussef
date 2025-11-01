@@ -1,51 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
-import 'Expenses_crud_uri.dart';
-import 'package:projetflutteryoussef/viewmodels/expenses_viewmodel.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_add.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_detail.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_grid_item.dart';
+import 'package:projetflutteryoussef/repositories/expenses_repository.dart' as _viewModel;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesList extends StatefulWidget {
-   const ExpensesList({super.key});
+  const ExpensesList({super.key});
 
   @override
   State<ExpensesList> createState() => _ExpensesListState();
 }
-class _ExpensesListState extends State<ExpensesList> {
-  final ExpensesViewModel _viewModel = ExpensesViewModel();
 
+class _ExpensesListState extends State<ExpensesList> {
   List<Expenses> _allExpenses = [];
   List<Expenses> _displayedExpenses = [];
-
   bool _isLoading = true;
   String _searchQuery = "";
   bool _isSortAsc = true;
 
-  void _refreshCartBadge() {
-    setState(() {});
-  }
-
   bool get _hasItemsInCart => CartManager().hasItems;
+
+
 
   @override
   void initState() {
     super.initState();
-    _viewModel.onExpensesUpdated = _onExpensesUpdated;
     _loadExpenses();
-  }
-
-  void _onExpensesUpdated() {
-    _allExpenses = _viewModel.expensesList;
-    _applyFilters();
   }
 
   Future<void> _loadExpenses() async {
     setState(() => _isLoading = true);
-    await _viewModel.loadExpenses();
-    _allExpenses = _viewModel.expensesList;
-    _applyFilters();
-    setState(() => _isLoading = false);
+
+    try {
+      final List<dynamic> data = await Supabase.instance.client
+          .from('Expenses')
+          .select()
+          .order('date', ascending: false);
+
+      print('Données reçues de Supabase : $data');
+
+      _allExpenses = data.map((e) => Expenses.fromJson(e)).toList();
+
+      print('Dépenses parsées: $_allExpenses');
+
+      _applyFilters();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du chargement des dépenses : $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _applyFilters() {
@@ -56,6 +66,11 @@ class _ExpensesListState extends State<ExpensesList> {
 
     _displayedExpenses.sort((a, b) =>
     _isSortAsc ? a.price.compareTo(b.price) : b.price.compareTo(a.price));
+    print('Nombre d\'éléments affichés: ${_displayedExpenses.length}');
+    setState(() {});
+  }
+
+  void _refreshCartBadge() {
     setState(() {});
   }
 
@@ -85,8 +100,10 @@ class _ExpensesListState extends State<ExpensesList> {
                 icon: const Icon(Icons.shopping_cart_outlined),
                 tooltip: 'Voir le panier',
                 onPressed: () async {
-                  await Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const CartView()));
+                  await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const CartView()));
                   _refreshCartBadge();
                 },
               ),
@@ -109,11 +126,13 @@ class _ExpensesListState extends State<ExpensesList> {
             icon: const Icon(Icons.add),
             tooltip: 'Ajouter une dépense',
             onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const ExpensesAdd()))
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ExpensesAdd()))
                   .then((newExpense) {
                 if (newExpense != null) {
-                  _viewModel.addExpense(newExpense);
+                  _loadExpenses();
                 }
               });
             },
@@ -175,9 +194,8 @@ class _ExpensesListState extends State<ExpensesList> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
+        SizedBox(
           height: 190,
-          color: Colors.transparent,
           child: sectionExpenses.isEmpty
               ? _buildEmptySection(title, color)
               : _buildExpenseGrid(sectionExpenses, color),
@@ -226,19 +244,29 @@ class _ExpensesListState extends State<ExpensesList> {
           child: ExpensesGridItem(
             expense: expense,
             sectionColor: color,
+            // Dans _buildExpenseGrid, lors du tap sur un item
             onTap: () async {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ExpensesDetail(
                     expense: expense,
-                    onUpdate: (updatedExpense) => _viewModel.updateExpense(updatedExpense),
-                    onDelete: (id) => _viewModel.deleteExpense(id),
+                    onUpdate: (updatedExpense) async {
+                      await _viewModel.updateExpense(updatedExpense);
+                      // Supprime _loadExpenses() ici car update déjà fait
+                    },
+                    onDelete: (id) async {
+                      await _viewModel.deleteExpense(id);
+                      // Supprime _loadExpenses() ici car delete déjà fait
+                    },
                   ),
                 ),
               );
+              await _loadExpenses();
               _refreshCartBadge();
             },
+
+
           ),
         );
       },

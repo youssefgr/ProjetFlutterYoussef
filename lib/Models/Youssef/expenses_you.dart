@@ -25,18 +25,23 @@ Map<String, dynamic> toMap() {
   };
 }
 
-factory Expenses.fromMap(Map<String, dynamic> map) {
+factory Expenses.fromJson(Map<String, dynamic> json) {
   return Expenses(
-    id: map['id'],
-    title: map['title'],
-    category: ExpensesCategory.values[map['category']],
-    date: DateTime.fromMillisecondsSinceEpoch(map['date']),
-    amount: map['amount'].toDouble(),
-    price: map['price'].toDouble(),
-    imageURL: map['imageURL'],
-    userId: map['userId'],
+    id: json['id'].toString(), // id peut être un int dans la BDD
+    title: json['title'] ?? '',
+    category: ExpensesCategory.values.firstWhere(
+          (e) => e.name.toLowerCase() == (json['category']?.toString().toLowerCase() ?? ''),
+      orElse: () => ExpensesCategory.Manga, // valeur par défaut
+    ),
+    date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
+    amount: (json['amount'] ?? 0).toDouble(),
+    price: (json['price'] ?? 0).toDouble(),
+    imageURL: json['imageURL'] ?? '',
+    userId: json['userId'] ?? '',
   );
 }
+
+
 
 Expenses copyWith({
   String? id,

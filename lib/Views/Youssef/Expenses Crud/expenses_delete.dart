@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesDelete extends StatelessWidget {
   final Expenses expense;
@@ -12,21 +13,54 @@ class ExpensesDelete extends StatelessWidget {
     required this.expense,
     required this.onDelete,
   });
+  Future<void> _deleteExpense(BuildContext context) async {
+    try {
+      // Supprime l'image liée dans le storage si elle existe
+      if (expense.imageURL.isNotEmpty) {
+        await ImageUtils.deleteImage(expense.imageURL);
+      }
+
+      // Supprime la dépense dans Supabase
+      await Supabase.instance.client
+          .from('Expenses')
+          .delete()
+          .eq('id', expense.id);
+
+      // Appelle le callback onDelete (mise à jour UI ou re-fetch)
+      onDelete();
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${expense.title}" supprimée avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la suppression : $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Delete Expense'),
+      title: const Text('Supprimer la dépense'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Are you sure you want to delete "${expense.title}"?',
+            'Êtes-vous sûr de vouloir supprimer "${expense.title}" ?',
             style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 16),
-
           if (expense.imageURL.isNotEmpty) ...[
             FutureBuilder<File?>(
               future: ImageUtils.getImageFile(expense.imageURL),
@@ -53,9 +87,8 @@ class ExpensesDelete extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-
           const Text(
-            'This action cannot be undone.',
+            'Cette action est irréversible.',
             style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           ),
         ],
@@ -63,32 +96,15 @@ class ExpensesDelete extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('Annuler'),
         ),
         ElevatedButton(
-          onPressed: () async {
-            // Suppression de l'image liée à la dépense
-            if (expense.imageURL.isNotEmpty) {
-              await ImageUtils.deleteImage(expense.imageURL);
-            }
-
-            // Exécution du callback de suppression
-            onDelete();
-
-            Navigator.pop(context);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('"${expense.title}" deleted successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
+          onPressed: () => _deleteExpense(context),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Delete'),
+          child: const Text('Supprimer'),
         ),
       ],
     );

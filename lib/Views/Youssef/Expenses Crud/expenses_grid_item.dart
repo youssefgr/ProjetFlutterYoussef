@@ -38,7 +38,6 @@ class ExpensesGridItem extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image Section
             Container(
               height: 100,
               decoration: const BoxDecoration(
@@ -49,8 +48,6 @@ class ExpensesGridItem extends StatelessWidget {
               ),
               child: _buildExpenseImage(),
             ),
-
-            // Text Section
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(6),

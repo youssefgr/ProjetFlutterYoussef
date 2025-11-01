@@ -1,9 +1,7 @@
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
-import 'package:projetflutteryoussef/repositories/expenses_repository.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
-
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesViewModel {
   List<Expenses> _expensesList = [];
@@ -12,56 +10,116 @@ class ExpensesViewModel {
   // Callback déclenché lorsque la liste des dépenses change
   Function()? onExpensesUpdated;
 
-  // Charger les dépenses depuis le stockage local
+  // Charger les dépenses depuis Supabase sans `.execute()`
   Future<void> loadExpenses() async {
-    _expensesList = await ExpensesRepository.loadExpenses();
-    onExpensesUpdated?.call();
-  }
+    try {
+      final data = await Supabase.instance.client
+          .from('Expenses')
+          .select()
+          .order('date', ascending: false);
 
-  // Ajouter une dépense
-  Future<void> addExpense(Expenses expense) async {
-    _expensesList.add(expense);
-    await ExpensesRepository.saveExpenses(_expensesList);
-    onExpensesUpdated?.call();
-  }
+      // data est une List<dynamic> venant de Supabase
+      _expensesList = (data as List).map((json) => Expenses.fromJson(json)).toList();
 
-  // Mettre à jour une dépense existante
-  Future<void> updateExpense(Expenses updatedExpense) async {
-    final index = _expensesList.indexWhere((item) => item.id == updatedExpense.id);
-    if (index != -1) {
-      _expensesList[index] = updatedExpense;
-      await ExpensesRepository.saveExpenses(_expensesList);
       onExpensesUpdated?.call();
+    } catch (e) {
+      print('Erreur chargement dépenses : $e');
     }
   }
 
-  // Supprimer une dépense
+  // Ajouter une dépense sans `.execute()`
+  Future<void> addExpense(Expenses expense) async {
+    try {
+      await Supabase.instance.client
+          .from('Expenses')
+          .upsert({
+        'id': expense.id,
+        'title': expense.title,
+        'category': expense.category.name,
+        'date': expense.date.toIso8601String(),
+        'amount': expense.amount,
+        'price': expense.price,
+        'imageURL': expense.imageURL,
+        'userId': expense.userId,
+      });
+
+      _expensesList.add(expense);
+      onExpensesUpdated?.call();
+    } catch (e) {
+      print('Erreur ajout dépense : $e');
+    }
+  }
+
+  // Mettre à jour une dépense existante sans `.execute()`
+  Future<void> updateExpense(Expenses updatedExpense) async {
+    try {
+      print('Update expense id: ${updatedExpense.id}');
+      await Supabase.instance.client
+          .from('Expenses')
+          .update({
+        'title': updatedExpense.title,
+        'category': updatedExpense.category.name,
+        'date': updatedExpense.date.toIso8601String(),
+        'amount': updatedExpense.amount,
+        'price': updatedExpense.price,
+        'imageURL': updatedExpense.imageURL,
+        'userId': updatedExpense.userId,
+      })
+          .eq('id', updatedExpense.id);
+
+      final index = _expensesList.indexWhere((item) => item.id == updatedExpense.id);
+      if (index != -1) {
+        _expensesList[index] = updatedExpense;
+        onExpensesUpdated?.call();
+      }
+      print('Update completed');
+    } catch (e) {
+      print('Erreur mise à jour dépense : $e');
+    }
+  }
+
+
+  // Supprimer une dépense sans `.execute()`
   Future<void> deleteExpense(String id) async {
-    final expense = _expensesList.firstWhere((item) => item.id == id);
-    if (expense.imageURL.isNotEmpty) {
-      await ImageUtils.deleteImage(expense.imageURL);
+    try {
+      final expense = _expensesList.firstWhere(
+            (item) => item.id == id,
+        orElse: () => throw Exception('Expense not found'),
+      );
+
+      if (expense.imageURL.isNotEmpty) {
+        await ImageUtils.deleteImage(expense.imageURL);
+      }
+
+      // Appel Supabase pour suppression
+      final _ = await Supabase.instance.client
+          .from('Expenses')
+          .delete()
+          .eq('id', id);
+
+      _expensesList.removeWhere((item) => item.id == id);
+      onExpensesUpdated?.call();
+    } catch (e) {
+      print('Erreur suppression dépense : $e');
     }
-    _expensesList.removeWhere((item) => item.id == id);
-    await ExpensesRepository.saveExpenses(_expensesList);
-    onExpensesUpdated?.call();
   }
 
-  // Filtrer les dépenses par catégorie
+
+
+  // Les autres méthodes restent inchangées...
+
   List<Expenses> getExpensesByCategory(ExpensesCategory category) {
     return _expensesList.where((expense) => expense.category == category).toList();
   }
 
-  // Rechercher une dépense par utilisateur
   List<Expenses> getExpensesByUser(String userId) {
     return _expensesList.where((expense) => expense.userId == userId).toList();
   }
 
-  // Calculer le total des montants
   double getTotalAmount() {
     return _expensesList.fold(0.0, (sum, item) => sum + item.amount);
   }
 
-  // Calculer le total du prix
   double getTotalPrice() {
     return _expensesList.fold(0.0, (sum, item) => sum + item.price);
   }

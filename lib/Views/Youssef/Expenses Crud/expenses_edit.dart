@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
-import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesEdit extends StatefulWidget {
   final Expenses expense;
@@ -204,7 +205,7 @@ class _ExpensesEditState extends State<ExpensesEdit> {
     );
   }
 
-  void _updateExpense() {
+  void _updateExpense() async {
     if (_formKey.currentState!.validate()) {
       final updatedExpense = widget.expense.copyWith(
         title: _titleController.text,
@@ -214,9 +215,33 @@ class _ExpensesEditState extends State<ExpensesEdit> {
         price: double.parse(_priceController.text),
       );
 
-      Navigator.pop(context, updatedExpense);
+      try {
+        await Supabase.instance.client
+            .from('Expenses')
+            .update({
+          'title': updatedExpense.title,
+          'category': updatedExpense.category.name,
+          'date': updatedExpense.date.toIso8601String(),
+          'amount': updatedExpense.amount,
+          'price': updatedExpense.price,
+          'imageURL': updatedExpense.imageURL,
+          'userId': updatedExpense.userId,
+        })
+            .eq('id', updatedExpense.id);
+
+        Navigator.pop(context, updatedExpense); // Ferme l'edit et renvoie l'update
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la mise à jour : $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
+
+
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(

@@ -19,7 +19,9 @@ class ExpensesRepository {
   static Future<void> saveExpenses(List<Expenses> expensesList) async {
     try {
       final file = await _getLocalFile();
-      final jsonList = expensesList.map((item) => _expenseToJson(item)).toList();
+      final jsonList = expensesList
+          .map((item) => _expenseToJson(item))
+          .toList();
       final jsonString = jsonEncode(jsonList);
       await file.writeAsString(jsonString);
     } catch (e) {
@@ -76,9 +78,7 @@ class ExpensesRepository {
 }
 
 Future<void> addExpenseToDatabase(Expenses expense) async {
-  final response = await Supabase.instance.client
-      .from('Expenses')
-      .upsert({
+  final response = await Supabase.instance.client.from('Expenses').upsert({
     'id': expense.id,
     'title': expense.title,
     'category': expense.category.name, // adapte si besoin
@@ -89,10 +89,71 @@ Future<void> addExpenseToDatabase(Expenses expense) async {
     'userId': expense.userId,
   });
 
-
   if (response.error != null) {
     // Gérer l'erreur
     print('Erreur d\'enregistrement : ${response.error!.message}');
+    throw response.error!;
+  }
+}
+
+Future<List<Expenses>> fetchExpensesFromSupabase() async {
+  try {
+    final response = await Supabase.instance.client
+        .from('Expenses')
+        .select()
+        .order('date', ascending: false);
+    final data = response as List<dynamic>;
+
+    return data.map((json) {
+      return Expenses(
+        id: json['id'],
+        title: json['title'],
+        category: ExpensesCategory.values.firstWhere(
+          (e) => e.name == json['category'],
+        ),
+        date: DateTime.parse(json['date']),
+        amount: (json['amount'] as num).toDouble(),
+        price: (json['price'] as num).toDouble(),
+        imageURL: json['imageURL'],
+        userId: json['userId'],
+      );
+    }).toList();
+  } catch (e) {
+    if (kDebugMode) {
+      print('Erreur lors du fetch des dépenses depuis Supabase : $e');
+    }
+    return [];
+  }
+}
+
+// Update une dépense dans Supabase
+Future<void> updateExpense(Expenses expense) async {
+  final response = await Supabase.instance.client
+      .from('Expenses')
+      .update({
+        'title': expense.title,
+        'category': expense.category.name,
+        'date': expense.date.toIso8601String(),
+        'amount': expense.amount,
+        'price': expense.price,
+        'imageURL': expense.imageURL,
+        'userId': expense.userId,
+      })
+      .eq('id', expense.id);
+
+  if (response.error != null) {
+    throw response.error!;
+  }
+}
+
+// Supprimer une dépense
+Future<void> deleteExpense(String id) async {
+  final response = await Supabase.instance.client
+      .from('Expenses')
+      .delete()
+      .eq('id', id);
+
+  if (response.error != null) {
     throw response.error!;
   }
 }
