@@ -5,7 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:projetflutteryoussef/Models/Youssef/purchase_history.dart';
-
+//idk what happened but this works now 
 class PdfGeneratorService {
   static Future<void> generateAndSharePurchaseHistoryPDF(
       List<PurchaseRecord> purchases,
