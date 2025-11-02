@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/utils/recaptcha_service.dart';
 import 'package:projetflutteryoussef/utils/email_service.dart';
+import 'package:projetflutteryoussef/utils/purchase_history_service.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Cart/purchase_history_view.dart';
 
 class CartView extends StatefulWidget {
   const CartView({super.key});
@@ -25,9 +27,22 @@ class _CartViewState extends State<CartView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // In cart_view.dart AppBar
       appBar: AppBar(
         title: const Text('Your Cart'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'View History',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PurchaseHistoryView(),
+                ),
+              );
+            },
+          ),
           if (cart.hasItems)
             IconButton(
               icon: const Icon(Icons.delete_forever),
@@ -190,7 +205,6 @@ class _CartViewState extends State<CartView> {
       ),
     );
   }
-
   Future<void> _handlePurchase() async {
     // Validate email first
     if (!_formKey.currentState!.validate()) {
@@ -214,9 +228,8 @@ class _CartViewState extends State<CartView> {
       if (!mounted) return;
 
       if (token != null && token.isNotEmpty) {
-        // Show verifying message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
                 SizedBox(
@@ -227,12 +240,12 @@ class _CartViewState extends State<CartView> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
-                SizedBox(width: 16),
-                Text('Verifying security...'),
+                const SizedBox(width: 16),
+                const Text('Verifying security...'),
               ],
             ),
             backgroundColor: Colors.blue,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
 
@@ -242,16 +255,24 @@ class _CartViewState extends State<CartView> {
         if (!mounted) return;
 
         if (valid) {
-          // CAPTCHA passed, now send email
+          // CAPTCHA passed, send email
           final emailSent = await sendPurchaseEmail(
             email: _emailController.text.trim(),
             items: cart.cartItems,
             total: cart.totalPrice,
           );
 
+          // Save purchase to local history
+          final historySaved = await PurchaseHistoryService.savePurchase(
+            cartItems: cart.cartItems,
+            total: cart.totalPrice,
+            email: _emailController.text.trim(),
+            // userId: null, // Will add when user system is implemented
+          );
+
           if (!mounted) return;
 
-          if (emailSent) {
+          if (emailSent && historySaved) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('✓ Purchase successful! Receipt sent to ${_emailController.text}'),
@@ -262,10 +283,21 @@ class _CartViewState extends State<CartView> {
             cart.clearCart();
             _emailController.clear();
             setState(() {});
+          } else if (!emailSent && historySaved) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚠️ Purchase saved but email failed. Check history for details.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 5),
+              ),
+            );
+            cart.clearCart();
+            _emailController.clear();
+            setState(() {});
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('⚠️ Purchase completed but failed to send email. Please contact support.'),
+                content: Text('⚠️ Purchase completed but failed to save. Please contact support.'),
                 backgroundColor: Colors.orange,
                 duration: Duration(seconds: 5),
               ),
@@ -303,4 +335,5 @@ class _CartViewState extends State<CartView> {
       }
     }
   }
+
 }
