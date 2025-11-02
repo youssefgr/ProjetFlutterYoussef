@@ -8,6 +8,7 @@ class Anime {
   final int ranking;
   final List<String> genres;
   final List<String> studios;
+  final String status; // ADD THIS
 
   Anime({
     required this.id,
@@ -19,6 +20,7 @@ class Anime {
     this.ranking = 0,
     this.genres = const [],
     this.studios = const [],
+    this.status = '', // ADD THIS
   });
 
   factory Anime.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Anime {
           ?.map((s) => s['name'] as String)
           .toList() ??
           [],
+      status: node['status'] ?? '', // ADD THIS
     );
   }
 }

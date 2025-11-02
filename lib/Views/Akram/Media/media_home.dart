@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
 import '../../../Models/Akram/media_models.dart';
 import 'media_detail_api.dart';
+import 'media_news.dart';
+
 
 class MediaHome extends StatefulWidget {
   const MediaHome({super.key});
@@ -124,6 +126,9 @@ class _MediaHomeState extends State<MediaHome> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
+                    MediaNews(viewModel: _viewModel),
+
+
                     const SizedBox(height: 16),
                     _buildHorizontalSection(
                       _viewModel.filteredMovies,
@@ -456,7 +461,6 @@ class _MediaHomeState extends State<MediaHome> {
   }
 }
 
-// Updated Filter Dialog for API Data with Dark Theme
 class ApiFilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;
   final VoidCallback onFiltersChanged;

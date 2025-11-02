@@ -11,6 +11,8 @@ class Manga {
   final int runtime;
   final List<String> genres;
   final String backdropPath;
+  final String status; // ADD THIS
+  final String startDate; // ADD THIS - you can use this instead of releaseDate if needed
 
   Manga({
     required this.id,
@@ -25,6 +27,8 @@ class Manga {
     required this.runtime,
     required this.genres,
     required this.backdropPath,
+    this.status = '', // ADD THIS
+    this.startDate = '', // ADD THIS
   });
 
   factory Manga.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class Manga {
           ? (node['genres'] as List).map((g) => (g['name'] as String? ?? '')).where((name) => name.isNotEmpty).toList()
           : <String>[]),
       backdropPath: (node['main_picture']?['large'] as String? ?? ''),
+      status: node['status'] ?? '', // ADD THIS
+      startDate: node['start_date'] ?? '', // ADD THIS
     );
   }
 }

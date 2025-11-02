@@ -12,12 +12,12 @@ class MediaViewModel {
   List<Movie> _movies = [];
   List<Series> _series = [];
   List<Anime> _anime = [];
-  List<Manga> _manga = []; // Added manga list
+  List<Manga> _manga = [];
 
   List<Movie> get movies => _movies;
   List<Series> get series => _series;
   List<Anime> get anime => _anime;
-  List<Manga> get manga => _manga; // Added manga getter
+  List<Manga> get manga => _manga;
 
   // Search and filter properties
   String _searchQuery = '';
@@ -34,24 +34,24 @@ class MediaViewModel {
   bool _isLoadingMovies = false;
   bool _isLoadingSeries = false;
   bool _isLoadingAnime = false;
-  bool _isLoadingManga = false; // Added manga loading state
+  bool _isLoadingManga = false;
 
   bool get isLoadingMovies => _isLoadingMovies;
   bool get isLoadingSeries => _isLoadingSeries;
   bool get isLoadingAnime => _isLoadingAnime;
-  bool get isLoadingManga => _isLoadingManga; // Added manga loading getter
-  bool get isLoadingAny => _isLoadingMovies || _isLoadingSeries || _isLoadingAnime || _isLoadingManga; // Updated
+  bool get isLoadingManga => _isLoadingManga;
+  bool get isLoadingAny => _isLoadingMovies || _isLoadingSeries || _isLoadingAnime || _isLoadingManga;
 
   // Error states
   String? _moviesError;
   String? _seriesError;
   String? _animeError;
-  String? _mangaError; // Added manga error state
+  String? _mangaError;
 
   String? get moviesError => _moviesError;
   String? get seriesError => _seriesError;
   String? get animeError => _animeError;
-  String? get mangaError => _mangaError; // Added manga error getter
+  String? get mangaError => _mangaError;
 
   // State management callbacks
   Function()? onMediaItemsUpdated;
@@ -67,13 +67,16 @@ class MediaViewModel {
   String get apiSearchQuery => _apiSearchQuery;
   MediaCategory? get selectedApiCategory => _selectedApiCategory;
 
+  // Current year for latest content
+  final int currentYear = DateTime.now().year;
+
   // Getters for filtered API data
   List<Movie> get filteredMovies {
     return _movies.where((movie) {
       final matchesSearch = _apiSearchQuery.isEmpty ||
           movie.title.toLowerCase().contains(_apiSearchQuery.toLowerCase());
       final matchesCategory = _selectedApiCategory == null ||
-          _selectedApiCategory == MediaCategory;
+          _selectedApiCategory == MediaCategory.movie;
       return matchesSearch && matchesCategory;
     }).toList();
   }
@@ -280,29 +283,42 @@ class MediaViewModel {
 
   // ========== API METHODS ==========
 
-  // Load Movies from TMDB with parallel detail loading
+  // Load Latest Movies from TMDB (current year releases)
   Future<void> loadMovies() async {
     _isLoadingMovies = true;
     _moviesError = null;
     onMediaItemsUpdated?.call();
 
     try {
+      // Use discover endpoint with current year filter and sort by popularity
       final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/movie/popular?api_key=$_tmdbApiKey'),
+        Uri.parse(
+            'https://api.themoviedb.org/3/discover/movie?'
+                'api_key=$_tmdbApiKey&'
+                'sort_by=popularity.desc&'
+                'primary_release_year=$currentYear&'
+                'page=1'
+        ),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'];
 
-        // Get movie IDs first
-        final movieIds = results.take(20).map((result) => result['id'] as int).toList();
+        // Get movie IDs - take up to 40
+        final movieIds = results.take(30).map((result) => result['id'] as int).toList();
 
         // Load all movie details in parallel
         final movieFutures = movieIds.map((movieId) => _fetchMovieDetail(movieId));
         final movies = await Future.wait(movieFutures);
 
-        _movies = movies.whereType<Movie>().toList();
+        // Filter out movies that are not from current year and sort by release date
+        _movies = movies.whereType<Movie>().toList()
+          ..removeWhere((movie) =>
+          movie.releaseDate == null ||
+              !movie.releaseDate!.contains(currentYear.toString()))
+          ..sort((a, b) => _compareDates(b.releaseDate, a.releaseDate));
+
         _moviesError = null;
       } else {
         _moviesError = 'Failed to load movies: ${response.statusCode}';
@@ -312,6 +328,154 @@ class MediaViewModel {
       print(_moviesError);
     } finally {
       _isLoadingMovies = false;
+      onMediaItemsUpdated?.call();
+    }
+  }
+
+  // Load Latest Series from TMDB (current year)
+  Future<void> loadSeries() async {
+    _isLoadingSeries = true;
+    _seriesError = null;
+    onMediaItemsUpdated?.call();
+
+    try {
+      // Use discover endpoint with current year filter
+      final response = await http.get(
+        Uri.parse(
+            'https://api.themoviedb.org/3/discover/tv?'
+                'api_key=$_tmdbApiKey&'
+                'sort_by=popularity.desc&'
+                'first_air_date_year=$currentYear&'
+                'page=1'
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> results = data['results'];
+
+        // Get series IDs - take up to 40
+        final seriesIds = results.take(30).map((result) => result['id'] as int).toList();
+
+        // Load all series details in parallel
+        final seriesFutures = seriesIds.map((seriesId) => _fetchSeriesDetail(seriesId));
+        final series = await Future.wait(seriesFutures);
+
+        // Filter and sort by first air date
+        _series = series.whereType<Series>().toList()
+          ..removeWhere((series) =>
+          series.firstAirDate == null ||
+              !series.firstAirDate!.contains(currentYear.toString()))
+          ..sort((a, b) => _compareDates(b.firstAirDate, a.firstAirDate));
+
+        _seriesError = null;
+      } else {
+        _seriesError = 'Failed to load series: ${response.statusCode}';
+      }
+    } catch (e) {
+      _seriesError = 'Error loading series: $e';
+      print(_seriesError);
+    } finally {
+      _isLoadingSeries = false;
+      onMediaItemsUpdated?.call();
+    }
+  }
+
+  // Load Latest Anime from MyAnimeList (current season)
+  Future<void> loadAnime() async {
+    _isLoadingAnime = true;
+    _animeError = null;
+    onMediaItemsUpdated?.call();
+
+    try {
+      // Use seasonal anime endpoint with proper parameters
+      final response = await http.get(
+        Uri.parse(
+            'https://api.myanimelist.net/v2/anime/season/$currentYear/${_getCurrentSeason()}?'
+                'limit=200&'
+                'sort=anime_num_list_users&'  // Sort by number of users (popularity)
+                'fields=id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,my_list_status,num_episodes,start_season,broadcast,source,average_episode_duration,rating,pictures,background,related_anime,related_manga,recommendations,studios,statistics'
+        ),
+        headers: {
+          'X-MAL-CLIENT-ID': _malClientId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> results = data['data'];
+
+        _anime = results.map((json) => Anime.fromJson(json)).toList()
+          ..sort((a, b) {
+            // Sort by mean score descending, then by start date
+            final aScore = a.mean ?? 0;
+            final bScore = b.mean ?? 0;
+            if (bScore != aScore) {
+              return bScore.compareTo(aScore);
+            }
+            return _compareDates(b.startDate, a.startDate);
+          });
+
+        _animeError = null;
+      } else {
+        _animeError = 'Failed to load anime: ${response.statusCode} - ${response.body}';
+      }
+    } catch (e) {
+      _animeError = 'Error loading anime: $e';
+      print(_animeError);
+    } finally {
+      _isLoadingAnime = false;
+      onMediaItemsUpdated?.call();
+    }
+  }
+
+  // Load Latest Manga from MyAnimeList
+  Future<void> loadManga() async {
+    _isLoadingManga = true;
+    _mangaError = null;
+    onMediaItemsUpdated?.call();
+
+    try {
+      // Use manga ranking with proper fields
+      final response = await http.get(
+        Uri.parse(
+            'https://api.myanimelist.net/v2/manga/ranking?'
+                'ranking_type=bypopularity&'
+                'limit=200&'
+                'fields=id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,my_list_status,num_volumes,num_chapters,authors{first_name,last_name},pictures,background,related_anime,related_manga,recommendations,serialization'
+        ),
+        headers: {
+          'X-MAL-CLIENT-ID': _malClientId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> results = data['data'];
+
+        _manga = results.map((json) => Manga.fromJson(json)).toList()
+          ..sort((a, b) {
+            // Prioritize currently publishing manga, then sort by start date
+            final aStatus = a.status?.toLowerCase() ?? '';
+            final bStatus = b.status?.toLowerCase() ?? '';
+            final aIsPublishing = aStatus.contains('publishing');
+            final bIsPublishing = bStatus.contains('publishing');
+
+            if (aIsPublishing && !bIsPublishing) return -1;
+            if (!aIsPublishing && bIsPublishing) return 1;
+
+            return _compareDates(b.startDate, a.startDate);
+          });
+
+        _mangaError = null;
+      } else {
+        _mangaError = 'Failed to load manga: ${response.statusCode} - ${response.body}';
+      }
+    } catch (e) {
+      _mangaError = 'Error loading manga: $e';
+      print(_mangaError);
+    } finally {
+      _isLoadingManga = false;
       onMediaItemsUpdated?.call();
     }
   }
@@ -333,42 +497,6 @@ class MediaViewModel {
     return null;
   }
 
-  // Load Series from TMDB with parallel detail loading
-  Future<void> loadSeries() async {
-    _isLoadingSeries = true;
-    _seriesError = null;
-    onMediaItemsUpdated?.call();
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/tv/popular?api_key=$_tmdbApiKey'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['results'];
-
-        // Get series IDs first
-        final seriesIds = results.take(20).map((result) => result['id'] as int).toList();
-
-        // Load all series details in parallel
-        final seriesFutures = seriesIds.map((seriesId) => _fetchSeriesDetail(seriesId));
-        final series = await Future.wait(seriesFutures);
-
-        _series = series.whereType<Series>().toList();
-        _seriesError = null;
-      } else {
-        _seriesError = 'Failed to load series: ${response.statusCode}';
-      }
-    } catch (e) {
-      _seriesError = 'Error loading series: $e';
-      print(_seriesError);
-    } finally {
-      _isLoadingSeries = false;
-      onMediaItemsUpdated?.call();
-    }
-  }
-
   // Helper method to fetch individual series details
   Future<Series?> _fetchSeriesDetail(int seriesId) async {
     try {
@@ -386,68 +514,20 @@ class MediaViewModel {
     return null;
   }
 
-  // Load Anime from MyAnimeList (already efficient)
-  Future<void> loadAnime() async {
-    _isLoadingAnime = true;
-    _animeError = null;
-    onMediaItemsUpdated?.call();
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.myanimelist.net/v2/anime/ranking?ranking_type=bypopularity&limit=20&fields=synopsis,mean,start_date,genres,studios'),
-        headers: {
-          'X-MAL-CLIENT-ID': _malClientId,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['data'];
-
-        _anime = results.map((json) => Anime.fromJson(json)).toList();
-        _animeError = null;
-      } else {
-        _animeError = 'Failed to load anime: ${response.statusCode}';
-      }
-    } catch (e) {
-      _animeError = 'Error loading anime: $e';
-      print(_animeError);
-    } finally {
-      _isLoadingAnime = false;
-      onMediaItemsUpdated?.call();
-    }
+  // Helper method to get current season for anime
+  String _getCurrentSeason() {
+    final month = DateTime.now().month;
+    if (month >= 1 && month <= 3) return 'winter';
+    if (month >= 4 && month <= 6) return 'spring';
+    if (month >= 7 && month <= 9) return 'summer';
+    return 'fall';
   }
 
-  // Load Manga from MyAnimeList
-  Future<void> loadManga() async {
-    _isLoadingManga = true;
-    _mangaError = null;
-    onMediaItemsUpdated?.call();
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.myanimelist.net/v2/manga/ranking?ranking_type=bypopularity&limit=20&fields=synopsis,mean,start_date,genres,authors'),
-        headers: {
-          'X-MAL-CLIENT-ID': _malClientId,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['data'];
-
-        _manga = results.map((json) => Manga.fromJson(json)).toList();
-        _mangaError = null;
-      } else {
-        _mangaError = 'Failed to load manga: ${response.statusCode}';
-      }
-    } catch (e) {
-      _mangaError = 'Error loading manga: $e';
-      print(_mangaError);
-    } finally {
-      _isLoadingManga = false;
-      onMediaItemsUpdated?.call();
-    }
+  // Helper method to compare dates safely
+  int _compareDates(String? dateA, String? dateB) {
+    final a = dateA ?? '';
+    final b = dateB ?? '';
+    return b.compareTo(a);
   }
 
   // Refresh API media with parallel loading
@@ -456,7 +536,7 @@ class MediaViewModel {
       loadMovies(),
       loadSeries(),
       loadAnime(),
-      loadManga(), // Added manga refresh
+      loadManga(),
     ]);
   }
 
@@ -466,8 +546,8 @@ class MediaViewModel {
     await Future.wait([
       _loadMoviesBasic(),
       _loadSeriesBasic(),
-      loadAnime(), // Anime is already efficient
-      loadManga(), // Manga is already efficient
+      loadAnime(),
+      loadManga(),
     ]);
   }
 
@@ -478,14 +558,24 @@ class MediaViewModel {
 
     try {
       final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/movie/popular?api_key=$_tmdbApiKey'),
+        Uri.parse(
+            'https://api.themoviedb.org/3/discover/movie?'
+                'api_key=$_tmdbApiKey&'
+                'sort_by=popularity.desc&'
+                'primary_release_year=$currentYear&'
+                'page=1'
+        ),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'];
 
-        _movies = results.take(20).map((result) => Movie.fromJson(result)).toList();
+        _movies = results.take(1).map((result) => Movie.fromJson(result)).toList()
+          ..removeWhere((movie) =>
+          movie.releaseDate == null ||
+              !movie.releaseDate!.contains(currentYear.toString()))
+          ..sort((a, b) => _compareDates(b.releaseDate, a.releaseDate));
         _moviesError = null;
       }
     } catch (e) {
@@ -503,14 +593,24 @@ class MediaViewModel {
 
     try {
       final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/tv/popular?api_key=$_tmdbApiKey'),
+        Uri.parse(
+            'https://api.themoviedb.org/3/discover/tv?'
+                'api_key=$_tmdbApiKey&'
+                'sort_by=popularity.desc&'
+                'first_air_date_year=$currentYear&'
+                'page=1'
+        ),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'];
 
-        _series = results.take(20).map((result) => Series.fromJson(result)).toList();
+        _series = results.take(1).map((result) => Series.fromJson(result)).toList()
+          ..removeWhere((series) =>
+          series.firstAirDate == null ||
+              !series.firstAirDate!.contains(currentYear.toString()))
+          ..sort((a, b) => _compareDates(b.firstAirDate, a.firstAirDate));
         _seriesError = null;
       }
     } catch (e) {

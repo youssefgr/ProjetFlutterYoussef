@@ -4,3 +4,5 @@ export 'media_delete.dart';
 export 'media_detail_api.dart';
 export 'media_home.dart';
 export 'media_list.dart';
+export 'media_news.dart';
+export 'media_export_pdf.dart';
