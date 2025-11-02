@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/utils/recaptcha_service.dart';
+import 'package:projetflutteryoussef/utils/email_service.dart';
 
 class CartView extends StatefulWidget {
   const CartView({super.key});
@@ -11,7 +12,15 @@ class CartView extends StatefulWidget {
 
 class _CartViewState extends State<CartView> {
   final CartManager cart = CartManager();
+  final TextEditingController _emailController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isProcessing = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +75,67 @@ class _CartViewState extends State<CartView> {
               },
             ),
           ),
+          _buildEmailSection(),
           _buildCartFooter(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmailSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        border: const Border(
+          top: BorderSide(color: Colors.grey, width: 0.3),
+        ),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.email, size: 20, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Email for receipt',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                hintText: 'your.email@example.com',
+                prefixIcon: const Icon(Icons.alternate_email),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your email';
+                }
+                // Basic email validation
+                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                if (!emailRegex.hasMatch(value)) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -81,12 +149,21 @@ class _CartViewState extends State<CartView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Total: ${cart.totalPrice.toStringAsFixed(2)} €',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              Text(
+                '${cart.totalPrice.toStringAsFixed(2)} €',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           ElevatedButton.icon(
             onPressed: _isProcessing ? null : _handlePurchase,
@@ -106,7 +183,7 @@ class _CartViewState extends State<CartView> {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _isProcessing ? Colors.grey : Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             ),
           ),
         ],
@@ -115,6 +192,17 @@ class _CartViewState extends State<CartView> {
   }
 
   Future<void> _handlePurchase() async {
+    // Validate email first
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
     try {
@@ -140,7 +228,7 @@ class _CartViewState extends State<CartView> {
                   ),
                 ),
                 SizedBox(width: 16),
-                Text('Verifying with server...'),
+                Text('Verifying security...'),
               ],
             ),
             backgroundColor: Colors.blue,
@@ -154,18 +242,39 @@ class _CartViewState extends State<CartView> {
         if (!mounted) return;
 
         if (valid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✓ Payment processing successful!'),
-              backgroundColor: Colors.green,
-            ),
+          // CAPTCHA passed, now send email
+          final emailSent = await sendPurchaseEmail(
+            email: _emailController.text.trim(),
+            items: cart.cartItems,
+            total: cart.totalPrice,
           );
-          cart.clearCart();
-          setState(() {});
+
+          if (!mounted) return;
+
+          if (emailSent) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✓ Purchase successful! Receipt sent to ${_emailController.text}'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+            cart.clearCart();
+            _emailController.clear();
+            setState(() {});
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚠️ Purchase completed but failed to send email. Please contact support.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('⚠️ Server verification failed. Please try again.'),
+              content: Text('⚠️ Security verification failed. Please try again.'),
               backgroundColor: Colors.red,
               duration: Duration(seconds: 4),
             ),
