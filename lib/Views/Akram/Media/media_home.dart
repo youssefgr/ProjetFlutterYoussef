@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
-import '../../../Models/Akram/movie_model.dart';
-import '../../../Models/Akram/series_model.dart';
-import '../../../Models/Akram/anime_model.dart';
+import '../../../Models/Akram/media_models.dart';
 import 'media_detail_api.dart';
 
 class MediaHome extends StatefulWidget {
@@ -47,7 +45,8 @@ class _MediaHomeState extends State<MediaHome> {
     if (_viewModel.isLoadingAny &&
         _viewModel.movies.isEmpty &&
         _viewModel.series.isEmpty &&
-        _viewModel.anime.isEmpty) {
+        _viewModel.anime.isEmpty &&
+        _viewModel.manga.isEmpty) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -88,6 +87,14 @@ class _MediaHomeState extends State<MediaHome> {
                 Colors.purple,
                 _viewModel.isLoadingAnime,
                 _viewModel.animeError,
+              ),
+              const SizedBox(height: 16),
+              _buildHorizontalSection(
+                _viewModel.manga,
+                'Manga',
+                Colors.green, // Different color for manga
+                _viewModel.isLoadingManga,
+                _viewModel.mangaError,
               ),
               const SizedBox(height: 16),
             ],
@@ -174,7 +181,7 @@ class _MediaHomeState extends State<MediaHome> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.movie_outlined,
+              _getSectionIcon(title),
               size: 50,
               color: color.withOpacity(0.5),
             ),
@@ -190,6 +197,15 @@ class _MediaHomeState extends State<MediaHome> {
         ),
       ),
     );
+  }
+
+  IconData _getSectionIcon(String title) {
+    switch (title.toLowerCase()) {
+      case 'manga':
+        return Icons.menu_book_outlined; // Different icon for manga
+      default:
+        return Icons.movie_outlined;
+    }
   }
 
   Widget _buildHorizontalScrollView(List<dynamic> items, Color color) {
@@ -210,21 +226,19 @@ class _MediaHomeState extends State<MediaHome> {
 
   Widget _buildMediaCard(dynamic item, Color color) {
     String imageUrl = '';
-    String title = '';
 
     if (item is Movie) {
       imageUrl = item.posterPath.isNotEmpty
           ? 'https://image.tmdb.org/t/p/w500${item.posterPath}'
           : '';
-      title = item.title;
     } else if (item is Series) {
       imageUrl = item.posterPath.isNotEmpty
           ? 'https://image.tmdb.org/t/p/w500${item.posterPath}'
           : '';
-      title = item.name;
     } else if (item is Anime) {
       imageUrl = item.posterPath;
-      title = item.title;
+    } else if (item is Manga) {
+      imageUrl = item.posterPath;
     }
 
     return GestureDetector(
@@ -248,7 +262,7 @@ class _MediaHomeState extends State<MediaHome> {
                     return Container(
                       color: color.withOpacity(0.2),
                       child: Icon(
-                        Icons.movie_outlined,
+                        _getItemIcon(item),
                         color: color,
                         size: 40,
                       ),
@@ -272,17 +286,24 @@ class _MediaHomeState extends State<MediaHome> {
                     : Container(
                   color: color.withOpacity(0.2),
                   child: Icon(
-                    Icons.movie_outlined,
+                    _getItemIcon(item),
                     color: color,
                     size: 40,
                   ),
                 ),
               ),
             ),
+            // Removed the title section completely
           ],
         ),
       ),
     );
+  }
+  IconData _getItemIcon(dynamic item) {
+    if (item is Manga) {
+      return Icons.menu_book_outlined;
+    }
+    return Icons.movie_outlined;
   }
 
   @override

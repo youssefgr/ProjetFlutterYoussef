@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
 
@@ -65,26 +64,9 @@ class _MediaGridItemState extends State<MediaGridItem> {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-           ?null,
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                _truncateTitle(widget.item.title, 12),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: widget.sectionColor,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: _buildImageContent(100, 140),
         ),
       ),
     );
@@ -109,7 +91,7 @@ class _MediaGridItemState extends State<MediaGridItem> {
       color: Colors.transparent,
       child: InkWell(
         onTap: widget.onTap,
-        onLongPress: null, // Disable long press here since we're using LongPressDraggable
+        onLongPress: null,
         borderRadius: BorderRadius.circular(8),
         child: Opacity(
           opacity: _isDragging ? 0.5 : 1.0,
@@ -117,7 +99,6 @@ class _MediaGridItemState extends State<MediaGridItem> {
             width: 120,
             height: 160,
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
@@ -127,54 +108,9 @@ class _MediaGridItemState extends State<MediaGridItem> {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Image - fixed height
-                Container(
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      topRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: null,
-                ),
-                // Text content
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          _truncateTitle(widget.item.title, 18),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.item.category.toString().split('.').last,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _buildImageContent(120, 160),
             ),
           ),
         ),
@@ -182,7 +118,55 @@ class _MediaGridItemState extends State<MediaGridItem> {
     );
   }
 
+  Widget _buildImageContent(double width, double height) {
+    if (widget.item.imageUrl.isEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: Icon(
+          Icons.movie_outlined,
+          color: widget.sectionColor.withOpacity(0.5),
+          size: 30,
+        ),
+      );
+    }
 
+    return Image.network(
+      widget.item.imageUrl,
+      width: width,
+      height: height,
+      fit: BoxFit.cover, // This ensures the image fills the container
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: width,
+          height: height,
+          color: Colors.grey[300],
+          child: Icon(
+            Icons.broken_image,
+            color: widget.sectionColor.withOpacity(0.5),
+            size: 30,
+          ),
+        );
+      },
+    );
+  }
 
   String _truncateTitle(String title, int maxLength) {
     if (title.length <= maxLength) return title;

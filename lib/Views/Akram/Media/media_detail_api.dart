@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../../../Models/Akram/movie_model.dart';
-import '../../../Models/Akram/series_model.dart';
-import '../../../Models/Akram/anime_model.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,19 +20,69 @@ class MediaDetailApi extends StatefulWidget {
 
 class _MediaDetailApiState extends State<MediaDetailApi> {
   bool _isAdding = false;
+  bool _isAlreadyInCollection = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadyInCollection();
+  }
+
+  // Check if the item is already in the collection
+  Future<void> _checkIfAlreadyInCollection() async {
+    if (widget.viewModel == null) return;
+
+    String title = '';
+    if (widget.item is Movie) {
+      title = (widget.item as Movie).title;
+    } else if (widget.item is Series) {
+      title = (widget.item as Series).name;
+    } else if (widget.item is Anime) {
+      title = (widget.item as Anime).title;
+    } else if (widget.item is Manga) {
+      title = (widget.item as Manga).title;
+    }
+
+    final existingItems = widget.viewModel!.mediaItems.where((item) =>
+    item.title.toLowerCase() == title.toLowerCase()).toList();
+
+    if (mounted) {
+      setState(() {
+        _isAlreadyInCollection = existingItems.isNotEmpty;
+      });
+    }
+  }
 
   Future<void> _showAddToCollectionDialog() async {
     MediaCategory? selectedCategory;
     MediaViewStatus selectedStatus = MediaViewStatus.toView;
     MediaGenre selectedGenre = MediaGenre.action;
 
-    // Pre-select category based on item type
+    // Pre-select category and genre based on item type
     if (widget.item is Movie) {
       selectedCategory = MediaCategory.film;
+      final movie = widget.item as Movie;
+      if (movie.genres.isNotEmpty) {
+        selectedGenre = GenreMapper.autoDetectGenre(movie.genres);
+      }
     } else if (widget.item is Series) {
       selectedCategory = MediaCategory.series;
+      final series = widget.item as Series;
+      if (series.genres.isNotEmpty) {
+        selectedGenre = GenreMapper.autoDetectGenre(series.genres);
+      }
     } else if (widget.item is Anime) {
       selectedCategory = MediaCategory.anime;
+      final anime = widget.item as Anime;
+      if (anime.genres.isNotEmpty) {
+        selectedGenre = GenreMapper.autoDetectGenre(anime.genres);
+      }
+    } else if (widget.item is Manga) {
+      selectedCategory = MediaCategory.manga; // Add manga category
+      final manga = widget.item as Manga;
+      if (manga.genres.isNotEmpty) {
+        selectedGenre = GenreMapper.autoDetectGenre(manga.genres);
+      }
     }
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -57,7 +104,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                   spacing: 8,
                   children: MediaCategory.values.map((category) {
                     return ChoiceChip(
-                      label: Text(category.toString().split('.').last),
+                      label: Text(GenreMapper.formatEnumName(category.name)),
                       selected: selectedCategory == category,
                       onSelected: (selected) {
                         setDialogState(() {
@@ -77,7 +124,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                   spacing: 8,
                   children: MediaViewStatus.values.map((status) {
                     return ChoiceChip(
-                      label: Text(status.toString().split('.').last),
+                      label: Text(GenreMapper.formatEnumName(status.name)),
                       selected: selectedStatus == status,
                       onSelected: (selected) {
                         setDialogState(() {
@@ -98,7 +145,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                   runSpacing: 8,
                   children: MediaGenre.values.map((genre) {
                     return ChoiceChip(
-                      label: Text(genre.toString().split('.').last),
+                      label: Text(GenreMapper.formatEnumName(genre.name)),
                       selected: selectedGenre == genre,
                       onSelected: (selected) {
                         setDialogState(() {
@@ -178,6 +225,12 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
         overview = anime.synopsis;
         releaseDate = anime.startDate.isNotEmpty ? anime.startDate : DateTime.now().toIso8601String();
         imageUrl = anime.posterPath;
+      } else if (widget.item is Manga) {
+        final manga = widget.item as Manga;
+        title = manga.title;
+        overview = manga.overview;
+        releaseDate = manga.releaseDate.isNotEmpty ? manga.releaseDate : DateTime.now().toIso8601String();
+        imageUrl = manga.posterPath;
       }
 
       final mediaItem = MediaItem(
@@ -196,6 +249,10 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
 
       if (widget.viewModel != null) {
         await widget.viewModel!.addMediaItem(mediaItem);
+        // Update the state after adding
+        setState(() {
+          _isAlreadyInCollection = true;
+        });
       }
 
       if (mounted) {
@@ -224,6 +281,16 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
     }
   }
 
+  void _showAlreadyInCollectionMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('This item is already in your collection!'),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String title = '';
@@ -249,6 +316,11 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
       title = anime.title;
       imageUrl = anime.posterPath;
       themeColor = Colors.purple;
+    } else if (widget.item is Manga) {
+      final manga = widget.item as Manga;
+      title = manga.title;
+      imageUrl = manga.posterPath;
+      themeColor = Colors.green;
     }
 
     return Scaffold(
@@ -256,20 +328,28 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
         title: Text(title),
         backgroundColor: themeColor,
         actions: [
-          IconButton(
-            icon: _isAdding
-                ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
+          // Show different icon based on whether item is already in collection
+          if (_isAlreadyInCollection)
+            IconButton(
+              icon: const Icon(Icons.check_circle, color: Colors.white),
+              onPressed: _showAlreadyInCollectionMessage,
+              tooltip: 'Already in Collection',
             )
-                : const Icon(Icons.add),
-            onPressed: _isAdding ? null : _showAddToCollectionDialog,
-            tooltip: 'Add to Collection',
-          ),
+          else
+            IconButton(
+              icon: _isAdding
+                  ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+                  : const Icon(Icons.add),
+              onPressed: _isAdding ? null : _showAddToCollectionDialog,
+              tooltip: 'Add to Collection',
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -290,7 +370,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                       return Container(
                         color: themeColor.withOpacity(0.2),
                         child: Icon(
-                          Icons.movie_outlined,
+                          widget.item is Manga ? Icons.menu_book_outlined : Icons.movie_outlined,
                           color: themeColor,
                           size: 100,
                         ),
@@ -305,7 +385,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                 width: double.infinity,
                 color: themeColor.withOpacity(0.2),
                 child: Icon(
-                  Icons.movie_outlined,
+                  widget.item is Manga ? Icons.menu_book_outlined : Icons.movie_outlined,
                   color: themeColor,
                   size: 100,
                 ),
@@ -330,6 +410,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
                   if (widget.item is Movie) _buildMovieContent(widget.item as Movie, themeColor),
                   if (widget.item is Series) _buildSeriesContent(widget.item as Series, themeColor),
                   if (widget.item is Anime) _buildAnimeContent(widget.item as Anime, themeColor),
+                  if (widget.item is Manga) _buildMangaContent(widget.item as Manga, themeColor), // UNCOMMENT THIS LINE
                 ],
               ),
             ),
@@ -410,6 +491,73 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
         _buildDetailRow('Language', movie.originalLanguage.toUpperCase(), themeColor),
         _buildDetailRow('Popularity', movie.popularity.toStringAsFixed(1), themeColor),
         _buildDetailRow('Vote Count', movie.voteCount.toString(), themeColor),
+      ],
+    );
+  }
+
+  Widget _buildMangaContent(Manga manga, Color themeColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Rating and Release Date
+        Row(
+          children: [
+            if (manga.voteAverage > 0) ...[
+              const Icon(Icons.star, color: Colors.amber, size: 24),
+              const SizedBox(width: 4),
+              Text(
+                manga.voteAverage.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+            ],
+            Icon(Icons.calendar_today, color: themeColor, size: 20),
+            const SizedBox(width: 4),
+            Text(
+              manga.releaseDate.isNotEmpty ? manga.releaseDate : 'Unknown',
+              style: const TextStyle(fontSize: 16),
+            ),
+            if (manga.runtime > 0) ...[
+              const SizedBox(width: 16),
+              Icon(Icons.format_list_numbered, color: themeColor, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                '${manga.runtime} chapters',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Genres
+        if (manga.genres.isNotEmpty) ...[
+          _buildSectionTitle('Genres'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: manga.genres
+                .map((genre) => Chip(
+              label: Text(genre),
+              backgroundColor: themeColor.withOpacity(0.2),
+              labelStyle: TextStyle(color: themeColor),
+            ))
+                .toList(),
+          ),
+          const SizedBox(height: 24),
+        ],
+
+        // Overview
+        _buildSectionTitle('Overview'),
+        const SizedBox(height: 8),
+        Text(
+          manga.overview.isEmpty ? 'No overview available' : manga.overview,
+          style: const TextStyle(fontSize: 16, height: 1.5),
+        ),
       ],
     );
   }

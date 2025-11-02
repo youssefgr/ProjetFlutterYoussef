@@ -19,7 +19,7 @@ class MediaItem {
     required this.releaseDate,
     required this.description,
     required this.status,
-    required this.genre, // Single genre
+    required this.genre,
     required this.userId,
   });
 

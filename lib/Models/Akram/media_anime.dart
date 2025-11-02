@@ -1,4 +1,3 @@
-// anime_model.dart
 class Anime {
   final int id;
   final String title;

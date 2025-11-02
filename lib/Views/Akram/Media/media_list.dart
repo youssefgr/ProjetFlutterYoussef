@@ -1,4 +1,3 @@
-// media_list.dart
 import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
@@ -105,7 +104,6 @@ class _MediaListState extends State<MediaList> {
             ),
             onPressed: _showFilterDialog,
           ),
-          // NOTE: Add button removed — you said you're using the Add button in MediaDetailApi
         ],
       ),
       body: Column(
@@ -322,7 +320,7 @@ class _MediaListState extends State<MediaList> {
   }
 }
 
-// Filter Dialog Widget (unchanged behavior, still uses enums if you keep them)
+// Filter Dialog Widget (unchanged)
 class FilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;
   final VoidCallback onFiltersChanged;
@@ -340,7 +338,7 @@ class FilterDialog extends StatefulWidget {
 class _FilterDialogState extends State<FilterDialog> {
   MediaCategory? _selectedCategory;
   MediaViewStatus? _selectedStatus;
-  MediaGenre? _selectedGenre; // Changed from list to single value previously in your code
+  MediaGenre? _selectedGenre;
 
   @override
   void initState() {
@@ -439,7 +437,6 @@ class _FilterDialogState extends State<FilterDialog> {
             widget.viewModel.setCategoryFilter(_selectedCategory);
             widget.viewModel.setStatusFilter(_selectedStatus);
             widget.viewModel.setGenreFilter(_selectedGenre);
-
             widget.onFiltersChanged();
             Navigator.pop(context);
           },

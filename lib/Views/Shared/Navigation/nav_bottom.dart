@@ -98,7 +98,7 @@ class _NavBottomState extends State<NavBottom> {
           ),*/
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
-            label: "Media",
+            label: "My Media",
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
