@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Home/home.dart';
 import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
+import 'package:projetflutteryoussef/Views/maamoune/community_management_screen.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -11,7 +12,11 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList()];
+  final List<Widget> _interfaces = const [
+    Home(),
+    MediaList(),
+    CommunityManagementScreen(), // Your new tabbed screen
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -35,41 +40,41 @@ class _NavBottomState extends State<NavBottom> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.movie),
+              leading: const Icon(Icons.cloud),
               title: const Text("Cloud Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 0; // Home index
                 });
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.movie),
+              leading: const Icon(Icons.monetization_on),
               title: const Text("Expenses Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 0; // Placeholder
                 });
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.movie),
+              leading: const Icon(Icons.groups),
               title: const Text("Community Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 2; // CommunityManagementScreen index
                 });
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.movie),
+              leading: const Icon(Icons.event),
               title: const Text("Event Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 0; // Placeholder
                 });
                 Navigator.pop(context);
               },
@@ -87,28 +92,12 @@ class _NavBottomState extends State<NavBottom> {
             icon: Icon(Icons.home),
             label: "Home",
           ),
-          /*BottomNavigationBarItem(
-            icon: Icon(Icons.edit),
-            label: "Edit Profile",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.logout),
-            label: "Disconnect",
-          ),*/
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
             label: "Media",
           )
-          /*BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on),
-            label: "Expenses",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.subscript),
-            label: "Subscription",
-          )*/
         ],
-        currentIndex: _currentIndex,
+        currentIndex: _currentIndex > 1 ? 0 : _currentIndex,
         onTap: (int index) {
           setState(() {
             _currentIndex = index;

@@ -5,16 +5,15 @@ import 'package:projetflutteryoussef/repositories/maamoune/user_repository.dart'
 import 'package:projetflutteryoussef/repositories/maamoune/community_repository.dart';
 import 'package:projetflutteryoussef/repositories/maamoune/friendship_repository.dart';
 void main() {
-  print("=== STARTING CRUD TESTS ===\n");
+  print("CRUD TESTS\n");
 
   final userRepo = UserRepository();
   final communityRepo = CommunityRepository();
   final friendshipRepo = FriendshipRepository();
 
-  // =====================
   // 👤 USER CRUD TEST
-  // =====================
-  print("🧍 USER TESTS");
+
+  print("USER TESTS");
 
   userRepo.addUser(User(
     userId: '1',
@@ -45,10 +44,9 @@ void main() {
   userRepo.deleteUser('2');
   print("Users after deletion: ${userRepo.getAllUsers()}\n");
 
-  // =====================
-  // 🏘️ COMMUNITY CRUD TEST
-  // =====================
-  print("🏘️ COMMUNITY TESTS");
+  //COMMUNITY CRUD TEST
+
+  print("COMMUNITY TESTS");
 
   communityRepo.createCommunity(Community(
     communityId: 'c1',
@@ -79,10 +77,9 @@ void main() {
   communityRepo.deleteCommunity('c1');
   print("Communities after deletion: ${communityRepo.getAllCommunities()}\n");
 
-  // =====================
-  // 🤝 FRIENDSHIP CRUD TEST
-  // =====================
-  print("🤝 FRIENDSHIP TESTS");
+  //FRIENDSHIP CRUD TEST
+
+  print("FRIENDSHIP TESTS");
 
   friendshipRepo.sendFriendRequest(Friendship(
     friendshipId: 'f1',
@@ -101,5 +98,4 @@ void main() {
   friendshipRepo.removeFriendship('f1');
   print("After removal: ${friendshipRepo.getAllFriendships()}\n");
 
-  print("=== END OF CRUD TESTS ===");
 }

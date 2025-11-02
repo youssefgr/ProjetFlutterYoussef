@@ -27,4 +27,24 @@ class FriendshipViewModel extends ChangeNotifier {
     _repository.removeFriendship(id);
     fetchFriendships();
   }
+
+  List<Friendship> getPendingRequests(String userId) {
+    return _repository.getPendingRequests(userId);
+  }
+
+  List<Friendship> getAcceptedFriends(String userId) {
+    return _repository.getAcceptedFriends(userId);
+  }
+
+  List<Friendship> getSentRequests(String userId) {
+    return _repository.getSentRequests(userId);
+  }
+
+  bool areFriends(String userId1, String userId2) {
+    return _repository.areFriends(userId1, userId2);
+  }
+
+  Friendship? getFriendshipBetween(String userId1, String userId2) {
+    return _repository.getFriendshipBetween(userId1, userId2);
+  }
 }

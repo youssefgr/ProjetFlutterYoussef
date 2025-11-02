@@ -3,9 +3,19 @@ import 'package:projetflutteryoussef/Views/Shared/Navigation/nav_bottom.dart';
 import 'package:projetflutteryoussef/viewmodels/maamoune/user_viewmodel.dart';
 import 'package:projetflutteryoussef/viewmodels/maamoune/community_viewmodel.dart';
 import 'package:projetflutteryoussef/viewmodels/maamoune/friendship_viewmodel.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserViewModel()),
+        ChangeNotifierProvider(create: (_) => CommunityViewModel()),
+        ChangeNotifierProvider(create: (_) => FriendshipViewModel()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

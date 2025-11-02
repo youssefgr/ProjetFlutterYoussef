@@ -3,12 +3,14 @@ class User {
   final String username;
   final String email;
   final String avatarUrl;
+  final List<String> communities; // List of community IDs user has joined
 
   User({
     required this.userId,
     required this.username,
     required this.email,
     required this.avatarUrl,
+    this.communities = const [],
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,9 @@ class User {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'] ?? '',
+      communities: json['communities'] != null
+          ? List<String>.from(json['communities'])
+          : [],
     );
   }
 
@@ -26,9 +31,25 @@ class User {
       'username': username,
       'email': email,
       'avatar_url': avatarUrl,
+      'communities': communities,
     };
   }
 
+  User copyWith({
+    String? userId,
+    String? username,
+    String? email,
+    String? avatarUrl,
+    List<String>? communities,
+  }) {
+    return User(
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      communities: communities ?? this.communities,
+    );
+  }
 
   @override
   String toString() {
