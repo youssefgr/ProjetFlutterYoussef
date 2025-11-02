@@ -115,7 +115,7 @@ class MediaRepository {
       id: idString,
       category: MediaCategory.values.firstWhere(
             (e) => e.name == json['category'],
-        orElse: () => MediaCategory.film,
+        orElse: () => MediaCategory.movie,
       ),
       title: json['title'] as String,
       imageUrl: json['imageUrl'] as String? ?? '',

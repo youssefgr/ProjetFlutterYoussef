@@ -12,6 +12,8 @@ class MediaHome extends StatefulWidget {
 
 class _MediaHomeState extends State<MediaHome> {
   final MediaViewModel _viewModel = MediaViewModel();
+  final TextEditingController _searchController = TextEditingController();
+  bool _showFilters = false;
 
   @override
   void initState() {
@@ -22,6 +24,16 @@ class _MediaHomeState extends State<MediaHome> {
       }
     };
     _loadData();
+
+    _searchController.addListener(() {
+      _viewModel.setApiSearchQuery(_searchController.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -42,64 +54,188 @@ class _MediaHomeState extends State<MediaHome> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (_viewModel.isLoadingAny &&
-        _viewModel.movies.isEmpty &&
-        _viewModel.series.isEmpty &&
-        _viewModel.anime.isEmpty &&
-        _viewModel.manga.isEmpty) {
-      return const Scaffold(
-        body: Center(
+        _viewModel.filteredMovies.isEmpty &&
+        _viewModel.filteredSeries.isEmpty &&
+        _viewModel.filteredAnime.isEmpty &&
+        _viewModel.filteredManga.isEmpty) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Media Collection'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildHorizontalSection(
-                _viewModel.movies,
-                'Movies',
-                Colors.orange,
-                _viewModel.isLoadingMovies,
-                _viewModel.moviesError,
-              ),
-              const SizedBox(height: 16),
-              _buildHorizontalSection(
-                _viewModel.series,
-                'Series',
-                Colors.blue,
-                _viewModel.isLoadingSeries,
-                _viewModel.seriesError,
-              ),
-              const SizedBox(height: 16),
-              _buildHorizontalSection(
-                _viewModel.anime,
-                'Anime',
-                Colors.purple,
-                _viewModel.isLoadingAnime,
-                _viewModel.animeError,
-              ),
-              const SizedBox(height: 16),
-              _buildHorizontalSection(
-                _viewModel.manga,
-                'Manga',
-                Colors.green, // Different color for manga
-                _viewModel.isLoadingManga,
-                _viewModel.mangaError,
-              ),
-              const SizedBox(height: 16),
-            ],
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              setState(() {
+                _showFilters = !_showFilters;
+                if (!_showFilters) {
+                  _searchController.clear();
+                }
+              });
+            },
           ),
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.filter_alt),
+                if (_viewModel.hasActiveApiFilters)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 12,
+                        minHeight: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: _showFilterDialog,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_showFilters) _buildSearchBar(theme, isDark),
+          if (_viewModel.hasActiveApiFilters) _buildActiveFiltersIndicator(theme, isDark),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(
+                      _viewModel.filteredMovies,
+                      'Movies',
+                      Colors.orange,
+                      _viewModel.isLoadingMovies,
+                      _viewModel.moviesError,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(
+                      _viewModel.filteredSeries,
+                      'Series',
+                      Colors.blue,
+                      _viewModel.isLoadingSeries,
+                      _viewModel.seriesError,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(
+                      _viewModel.filteredAnime,
+                      'Anime',
+                      Colors.purple,
+                      _viewModel.isLoadingAnime,
+                      _viewModel.animeError,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHorizontalSection(
+                      _viewModel.filteredManga,
+                      'Manga',
+                      Colors.green,
+                      _viewModel.isLoadingManga,
+                      _viewModel.mangaError,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: isDark ? Colors.grey[900] : Colors.grey[50],
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+        decoration: InputDecoration(
+          hintText: 'Search by title...',
+          hintStyle: TextStyle(color: theme.hintColor),
+          prefixIcon: Icon(Icons.search, color: theme.iconTheme.color),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+            icon: Icon(Icons.clear, color: theme.iconTheme.color),
+            onPressed: () {
+              _searchController.clear();
+            },
+          )
+              : null,
+          filled: true,
+          fillColor: isDark ? Colors.grey[800] : Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActiveFiltersIndicator(ThemeData theme, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDark ? Colors.blue[900] : Colors.blue[50],
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _viewModel.activeApiFiltersDescription,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.blue[200] : Colors.blue,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.blue[200] : Colors.blue),
+            onPressed: () {
+              _viewModel.clearAllApiFilters();
+              _searchController.clear();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => ApiFilterDialog(
+        viewModel: _viewModel,
+        onFiltersChanged: () {
+          setState(() {});
+        },
       ),
     );
   }
@@ -111,6 +247,10 @@ class _MediaHomeState extends State<MediaHome> {
       bool isLoading,
       String? error,
       ) {
+    if (_viewModel.hasActiveApiFilters && items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -193,6 +333,14 @@ class _MediaHomeState extends State<MediaHome> {
                 fontSize: 16,
               ),
             ),
+            if (_viewModel.hasActiveApiFilters)
+              Text(
+                'Try changing your filters',
+                style: TextStyle(
+                  color: color.withOpacity(0.5),
+                  fontSize: 12,
+                ),
+              ),
           ],
         ),
       ),
@@ -202,7 +350,7 @@ class _MediaHomeState extends State<MediaHome> {
   IconData _getSectionIcon(String title) {
     switch (title.toLowerCase()) {
       case 'manga':
-        return Icons.menu_book_outlined; // Different icon for manga
+        return Icons.menu_book_outlined;
       default:
         return Icons.movie_outlined;
     }
@@ -248,6 +396,7 @@ class _MediaHomeState extends State<MediaHome> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
+        color: Theme.of(context).cardColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -293,22 +442,128 @@ class _MediaHomeState extends State<MediaHome> {
                 ),
               ),
             ),
-            // Removed the title section completely
           ],
         ),
       ),
     );
   }
+
   IconData _getItemIcon(dynamic item) {
     if (item is Manga) {
       return Icons.menu_book_outlined;
     }
     return Icons.movie_outlined;
   }
+}
+
+// Updated Filter Dialog for API Data with Dark Theme
+class ApiFilterDialog extends StatefulWidget {
+  final MediaViewModel viewModel;
+  final VoidCallback onFiltersChanged;
+
+  const ApiFilterDialog({
+    super.key,
+    required this.viewModel,
+    required this.onFiltersChanged,
+  });
 
   @override
-  void dispose() {
-    _viewModel.onMediaItemsUpdated = null;
-    super.dispose();
+  State<ApiFilterDialog> createState() => _ApiFilterDialogState();
+}
+
+class _ApiFilterDialogState extends State<ApiFilterDialog> {
+  MediaCategory? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.viewModel.selectedApiCategory;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: theme.dialogBackgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.filter_alt, color: theme.iconTheme.color),
+                const SizedBox(width: 8),
+                Text(
+                  'Filter Media',
+                  style: theme.textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Category', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: MediaCategory.values.map((category) {
+                return FilterChip(
+                  label: Text(
+                    category.toString().split('.').last,
+                    style: TextStyle(
+                      color: _selectedCategory == category
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  selected: _selectedCategory == category,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedCategory = selected ? category : null;
+                    });
+                  },
+                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                  selectedColor: theme.primaryColor,
+                  checkmarkColor: theme.colorScheme.onPrimary,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategory = null;
+                    });
+                  },
+                  child: Text('Clear All', style: theme.textTheme.bodyMedium),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: theme.textTheme.bodyMedium),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.viewModel.setApiCategoryFilter(_selectedCategory);
+                    widget.onFiltersChanged();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Apply', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onPrimary)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

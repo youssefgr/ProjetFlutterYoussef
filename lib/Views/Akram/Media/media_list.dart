@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
 import 'media_views.dart';
+import 'media_export_pdf.dart'; // Add this import
+
 
 class MediaList extends StatefulWidget {
   const MediaList({super.key});
@@ -54,20 +56,39 @@ class _MediaListState extends State<MediaList> {
       });
     }
   }
+  Future<void> _exportToPDF() async {
+    if (_viewModel.mediaItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No media items to export'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
+    await MediaExportPDF.exportMediaListToPDF(context, _viewModel);
+  }
+  @override
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Media Collection'),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -104,12 +125,18 @@ class _MediaListState extends State<MediaList> {
             ),
             onPressed: _showFilterDialog,
           ),
+          // Add PDF Export Icon
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: _exportToPDF,
+            tooltip: 'Export to PDF',
+          ),
         ],
       ),
       body: Column(
         children: [
-          if (_showFilters) _buildSearchBar(),
-          if (_viewModel.hasActiveFilters) _buildActiveFiltersIndicator(),
+          if (_showFilters) _buildSearchBar(theme, isDark),
+          if (_viewModel.hasActiveFilters) _buildActiveFiltersIndicator(theme, isDark),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadMediaItems,
@@ -133,49 +160,57 @@ class _MediaListState extends State<MediaList> {
       ),
     );
   }
-
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(ThemeData theme, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.grey[50],
+      color: isDark ? Colors.grey[900] : Colors.grey[50],
       child: TextField(
         controller: _searchController,
+        style: TextStyle(color: theme.textTheme.bodyLarge?.color),
         decoration: InputDecoration(
           hintText: 'Search by title or description...',
-          prefixIcon: const Icon(Icons.search),
+          hintStyle: TextStyle(color: theme.hintColor),
+          prefixIcon: Icon(Icons.search, color: theme.iconTheme.color),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-            icon: const Icon(Icons.clear),
+            icon: Icon(Icons.clear, color: theme.iconTheme.color),
             onPressed: () {
               _searchController.clear();
             },
           )
               : null,
+          filled: true,
+          fillColor: isDark ? Colors.grey[800] : Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
           ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         ),
       ),
     );
   }
 
-  Widget _buildActiveFiltersIndicator() {
+  Widget _buildActiveFiltersIndicator(ThemeData theme, bool isDark) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.blue[50],
+      color: isDark ? Colors.blue[900] : Colors.blue[50],
       child: Row(
         children: [
           Expanded(
             child: Text(
               _viewModel.activeFiltersDescription,
-              style: const TextStyle(fontSize: 12, color: Colors.blue),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.blue[200] : Colors.blue,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.clear, size: 16),
+            icon: Icon(Icons.clear, size: 16, color: isDark ? Colors.blue[200] : Colors.blue),
             onPressed: () {
               _viewModel.clearAllFilters();
               _searchController.clear();
@@ -320,7 +355,7 @@ class _MediaListState extends State<MediaList> {
   }
 }
 
-// Filter Dialog Widget (unchanged)
+// Updated Filter Dialog Widget with Dark Theme
 class FilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;
   final VoidCallback onFiltersChanged;
@@ -350,99 +385,154 @@ class _FilterDialogState extends State<FilterDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Row(
-        children: [
-          Icon(Icons.filter_alt),
-          SizedBox(width: 8),
-          Text('Filter Media'),
-        ],
-      ),
-      content: SingleChildScrollView(
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: theme.dialogBackgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Category', style: TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Icon(Icons.filter_alt, color: theme.iconTheme.color),
+                const SizedBox(width: 8),
+                Text(
+                  'Filter Media',
+                  style: theme.textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Category Section
+            Text('Category', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: MediaCategory.values.map((category) {
                 return FilterChip(
-                  label: Text(category.toString().split('.').last),
+                  label: Text(
+                    category.toString().split('.').last,
+                    style: TextStyle(
+                      color: _selectedCategory == category
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
                   selected: _selectedCategory == category,
                   onSelected: (selected) {
                     setState(() {
                       _selectedCategory = selected ? category : null;
                     });
                   },
+                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                  selectedColor: theme.primaryColor,
+                  checkmarkColor: theme.colorScheme.onPrimary,
                 );
               }).toList(),
             ),
             const SizedBox(height: 16),
 
-            const Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
+            // Status Section
+            Text('Status', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: MediaViewStatus.values.map((status) {
                 return FilterChip(
-                  label: Text(status.toString().split('.').last),
+                  label: Text(
+                    status.toString().split('.').last,
+                    style: TextStyle(
+                      color: _selectedStatus == status
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
                   selected: _selectedStatus == status,
                   onSelected: (selected) {
                     setState(() {
                       _selectedStatus = selected ? status : null;
                     });
                   },
+                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                  selectedColor: theme.primaryColor,
+                  checkmarkColor: theme.colorScheme.onPrimary,
                 );
               }).toList(),
             ),
             const SizedBox(height: 16),
 
-            const Text('Genre', style: TextStyle(fontWeight: FontWeight.bold)),
+            // Genre Section
+            Text('Genre', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: MediaGenre.values.map((genre) {
                 return FilterChip(
-                  label: Text(genre.toString().split('.').last),
+                  label: Text(
+                    genre.toString().split('.').last,
+                    style: TextStyle(
+                      color: _selectedGenre == genre
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
                   selected: _selectedGenre == genre,
                   onSelected: (selected) {
                     setState(() {
                       _selectedGenre = selected ? genre : null;
                     });
                   },
+                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                  selectedColor: theme.primaryColor,
+                  checkmarkColor: theme.colorScheme.onPrimary,
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 20),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategory = null;
+                      _selectedStatus = null;
+                      _selectedGenre = null;
+                    });
+                  },
+                  child: Text('Clear All', style: theme.textTheme.bodyMedium),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: theme.textTheme.bodyMedium),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.viewModel.setCategoryFilter(_selectedCategory);
+                    widget.viewModel.setStatusFilter(_selectedStatus);
+                    widget.viewModel.setGenreFilter(_selectedGenre);
+                    widget.onFiltersChanged();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Apply', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onPrimary)),
+                ),
+              ],
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            setState(() {
-              _selectedCategory = null;
-              _selectedStatus = null;
-              _selectedGenre = null;
-            });
-          },
-          child: const Text('Clear All'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            widget.viewModel.setCategoryFilter(_selectedCategory);
-            widget.viewModel.setStatusFilter(_selectedStatus);
-            widget.viewModel.setGenreFilter(_selectedGenre);
-            widget.onFiltersChanged();
-            Navigator.pop(context);
-          },
-          child: const Text('Apply'),
-        ),
-      ],
     );
   }
 }

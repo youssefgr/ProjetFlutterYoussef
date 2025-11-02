@@ -1,6 +1,6 @@
 enum MediaCategory {
   anime,
-  film,
+  movie,
   manga,
   series,
 }

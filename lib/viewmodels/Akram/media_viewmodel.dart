@@ -60,6 +60,84 @@ class MediaViewModel {
   static const String _tmdbApiKey = 'e30a8bbae804539701776e9413710ee0';
   static const String _malClientId = 'fa38936ac71c9615ff9e37646443b609';
 
+  // API Search and Filter properties
+  String _apiSearchQuery = '';
+  MediaCategory? _selectedApiCategory;
+
+  String get apiSearchQuery => _apiSearchQuery;
+  MediaCategory? get selectedApiCategory => _selectedApiCategory;
+
+  // Getters for filtered API data
+  List<Movie> get filteredMovies {
+    return _movies.where((movie) {
+      final matchesSearch = _apiSearchQuery.isEmpty ||
+          movie.title.toLowerCase().contains(_apiSearchQuery.toLowerCase());
+      final matchesCategory = _selectedApiCategory == null ||
+          _selectedApiCategory == MediaCategory;
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  List<Series> get filteredSeries {
+    return _series.where((series) {
+      final matchesSearch = _apiSearchQuery.isEmpty ||
+          series.name.toLowerCase().contains(_apiSearchQuery.toLowerCase());
+      final matchesCategory = _selectedApiCategory == null ||
+          _selectedApiCategory == MediaCategory.series;
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  List<Anime> get filteredAnime {
+    return _anime.where((anime) {
+      final matchesSearch = _apiSearchQuery.isEmpty ||
+          anime.title.toLowerCase().contains(_apiSearchQuery.toLowerCase());
+      final matchesCategory = _selectedApiCategory == null ||
+          _selectedApiCategory == MediaCategory.anime;
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  List<Manga> get filteredManga {
+    return _manga.where((manga) {
+      final matchesSearch = _apiSearchQuery.isEmpty ||
+          manga.title.toLowerCase().contains(_apiSearchQuery.toLowerCase());
+      final matchesCategory = _selectedApiCategory == null ||
+          _selectedApiCategory == MediaCategory.manga;
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  // API Filter methods
+  void setApiSearchQuery(String query) {
+    _apiSearchQuery = query;
+    onMediaItemsUpdated?.call();
+  }
+
+  void setApiCategoryFilter(MediaCategory? category) {
+    _selectedApiCategory = category;
+    onMediaItemsUpdated?.call();
+  }
+
+  void clearAllApiFilters() {
+    _apiSearchQuery = '';
+    _selectedApiCategory = null;
+    onMediaItemsUpdated?.call();
+  }
+
+  bool get hasActiveApiFilters {
+    return _apiSearchQuery.isNotEmpty || _selectedApiCategory != null;
+  }
+
+  String get activeApiFiltersDescription {
+    final filters = <String>[];
+    if (_apiSearchQuery.isNotEmpty) filters.add('Search: "$_apiSearchQuery"');
+    if (_selectedApiCategory != null) {
+      filters.add('Category: ${_selectedApiCategory.toString().split('.').last}');
+    }
+    return filters.join(' • ');
+  }
+
   // Get filtered media items
   List<MediaItem> get filteredMediaItems {
     return _mediaItems.where((item) {
@@ -134,7 +212,7 @@ class MediaViewModel {
       loadMovies(),
       loadSeries(),
       loadAnime(),
-      loadManga(), // Added manga loading
+      loadManga(),
     ]);
   }
 

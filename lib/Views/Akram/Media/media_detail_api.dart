@@ -60,7 +60,7 @@ class _MediaDetailApiState extends State<MediaDetailApi> {
 
     // Pre-select category and genre based on item type
     if (widget.item is Movie) {
-      selectedCategory = MediaCategory.film;
+      selectedCategory = MediaCategory.movie;
       final movie = widget.item as Movie;
       if (movie.genres.isNotEmpty) {
         selectedGenre = GenreMapper.autoDetectGenre(movie.genres);

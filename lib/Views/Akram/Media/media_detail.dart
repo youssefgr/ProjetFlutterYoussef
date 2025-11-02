@@ -31,7 +31,7 @@ class _MediaDetailState extends State<MediaDetail> {
 
   Color _getThemeColor() {
     switch (widget.mediaItem.category) {
-      case MediaCategory.film:
+      case MediaCategory.movie:
         return Colors.orange;
       case MediaCategory.series:
         return Colors.blue;
