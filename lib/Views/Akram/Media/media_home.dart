@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import '../../../viewmodels/Akram/media_viewmodel.dart';
 import '../../../Models/Akram/movie_model.dart';
 import '../../../Models/Akram/series_model.dart';
 import '../../../Models/Akram/anime_model.dart';
+import 'media_detail_api.dart';
 
 class MediaHome extends StatefulWidget {
   const MediaHome({super.key});
@@ -13,96 +13,41 @@ class MediaHome extends StatefulWidget {
 }
 
 class _MediaHomeState extends State<MediaHome> {
-  bool _isLoading = true;
-  List<Movie> _movies = [];
-  List<Series> _series = [];
-  List<Anime> _anime = [];
+  final MediaViewModel _viewModel = MediaViewModel();
 
   @override
   void initState() {
     super.initState();
+    _viewModel.onMediaItemsUpdated = () {
+      if (mounted) {
+        setState(() {});
+      }
+    };
     _loadData();
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    await Future.wait([
-      _loadMovies(),
-      _loadSeries(),
-      _loadAnime(),
-    ]);
-
-    setState(() {
-      _isLoading = false;
-    });
+    await _viewModel.loadAllMedia();
   }
 
-  Future<void> _loadMovies() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/movie/popular?api_key=e30a8bbae804539701776e9413710ee0'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['results'];
-
-        setState(() {
-          _movies = results.map((json) => Movie.fromJson(json)).toList();
-        });
-      }
-    } catch (e) {
-      print('Error loading movies: $e');
-    }
-  }
-
-  Future<void> _loadSeries() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.themoviedb.org/3/tv/popular?api_key=e30a8bbae804539701776e9413710ee0'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['results'];
-
-        setState(() {
-          _series = results.map((json) => Series.fromJson(json)).toList();
-        });
-      }
-    } catch (e) {
-      print('Error loading series: $e');
-    }
-  }
-
-  Future<void> _loadAnime() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.myanimelist.net/v2/anime/ranking?ranking_type=bypopularity&limit=20'),
-        headers: {
-          'X-MAL-CLIENT-ID': 'fa38936ac71c9615ff9e37646443b609',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> results = data['data'];
-
-        setState(() {
-          _anime = results.map((json) => Anime.fromJson(json)).toList();
-        });
-      }
-    } catch (e) {
-      print('Error loading anime: $e');
-    }
+  void _navigateToDetail(dynamic item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MediaDetailApi(
+          item: item,
+          viewModel: _viewModel,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_viewModel.isLoadingAny &&
+        _viewModel.movies.isEmpty &&
+        _viewModel.series.isEmpty &&
+        _viewModel.anime.isEmpty) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -121,11 +66,29 @@ class _MediaHomeState extends State<MediaHome> {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              _buildHorizontalSection(_movies, 'Movies', Colors.orange),
+              _buildHorizontalSection(
+                _viewModel.movies,
+                'Movies',
+                Colors.orange,
+                _viewModel.isLoadingMovies,
+                _viewModel.moviesError,
+              ),
               const SizedBox(height: 16),
-              _buildHorizontalSection(_series, 'Series', Colors.blue),
+              _buildHorizontalSection(
+                _viewModel.series,
+                'Series',
+                Colors.blue,
+                _viewModel.isLoadingSeries,
+                _viewModel.seriesError,
+              ),
               const SizedBox(height: 16),
-              _buildHorizontalSection(_anime, 'Anime', Colors.purple),
+              _buildHorizontalSection(
+                _viewModel.anime,
+                'Anime',
+                Colors.purple,
+                _viewModel.isLoadingAnime,
+                _viewModel.animeError,
+              ),
               const SizedBox(height: 16),
             ],
           ),
@@ -134,33 +97,76 @@ class _MediaHomeState extends State<MediaHome> {
     );
   }
 
-  Widget _buildHorizontalSection(List<dynamic> items, String title, Color color) {
+  Widget _buildHorizontalSection(
+      List<dynamic> items,
+      String title,
+      Color color,
+      bool isLoading,
+      String? error,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '$title | ${items.length}',
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Row(
+            children: [
+              Text(
+                '$title | ${items.length}',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (isLoading) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
+        if (error != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              error,
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Container(
           height: 180,
           child: items.isEmpty
-              ? _buildEmptySection(title, color)
+              ? _buildEmptySection(title, color, isLoading)
               : _buildHorizontalScrollView(items, color),
         ),
       ],
     );
   }
 
-  Widget _buildEmptySection(String title, Color color) {
+  Widget _buildEmptySection(String title, Color color, bool isLoading) {
+    if (isLoading) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Center(
+          child: CircularProgressIndicator(color: color),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Center(
@@ -222,9 +228,7 @@ class _MediaHomeState extends State<MediaHome> {
     }
 
     return GestureDetector(
-      onTap: () {
-        // Handle tap if needed
-      },
+      onTap: () => _navigateToDetail(item),
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(
@@ -275,22 +279,15 @@ class _MediaHomeState extends State<MediaHome> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _viewModel.onMediaItemsUpdated = null;
+    super.dispose();
   }
 }

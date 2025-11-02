@@ -1,3 +1,4 @@
+//media_enums.dart
 enum MediaCategory {
   anime,
   film,

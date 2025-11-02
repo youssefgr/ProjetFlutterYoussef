@@ -1,3 +1,4 @@
+// media_list.dart
 import 'package:flutter/material.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../viewmodels/Akram/media_viewmodel.dart';
@@ -104,17 +105,7 @@ class _MediaListState extends State<MediaList> {
             ),
             onPressed: _showFilterDialog,
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MediaAdd()),
-              );
-              // Always reload data when returning from add screen
-              await _loadMediaItems();
-            },
-          ),
+          // NOTE: Add button removed — you said you're using the Add button in MediaDetailApi
         ],
       ),
       body: Column(
@@ -331,7 +322,7 @@ class _MediaListState extends State<MediaList> {
   }
 }
 
-// Filter Dialog Widget (unchanged)
+// Filter Dialog Widget (unchanged behavior, still uses enums if you keep them)
 class FilterDialog extends StatefulWidget {
   final MediaViewModel viewModel;
   final VoidCallback onFiltersChanged;
@@ -349,14 +340,14 @@ class FilterDialog extends StatefulWidget {
 class _FilterDialogState extends State<FilterDialog> {
   MediaCategory? _selectedCategory;
   MediaViewStatus? _selectedStatus;
-  MediaGenre? _selectedGenre; // Changed from list to single value
+  MediaGenre? _selectedGenre; // Changed from list to single value previously in your code
 
   @override
   void initState() {
     super.initState();
     _selectedCategory = widget.viewModel.selectedCategory;
     _selectedStatus = widget.viewModel.selectedStatus;
-    _selectedGenre = widget.viewModel.selectedGenre; // Changed
+    _selectedGenre = widget.viewModel.selectedGenre;
   }
 
   @override
