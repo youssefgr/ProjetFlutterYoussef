@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
@@ -8,6 +11,8 @@ import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_deta
 import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_grid_item.dart';
 import 'package:projetflutteryoussef/repositories/expenses_repository.dart' as _viewModel;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' hide Stack, Column;
+import 'package:path_provider/path_provider.dart';
 
 class ExpensesList extends StatefulWidget {
   const ExpensesList({super.key});
@@ -25,8 +30,6 @@ class _ExpensesListState extends State<ExpensesList> {
 
   bool get _hasItemsInCart => CartManager().hasItems;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -35,7 +38,6 @@ class _ExpensesListState extends State<ExpensesList> {
 
   Future<void> _loadExpenses() async {
     setState(() => _isLoading = true);
-
     try {
       final List<dynamic> data = await Supabase.instance.client
           .from('Expenses')
@@ -43,11 +45,9 @@ class _ExpensesListState extends State<ExpensesList> {
           .order('date', ascending: false);
 
       print('Données reçues de Supabase : $data');
-
       _allExpenses = data.map((e) => Expenses.fromJson(e)).toList();
 
       print('Dépenses parsées: $_allExpenses');
-
       _applyFilters();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,6 +68,100 @@ class _ExpensesListState extends State<ExpensesList> {
     _isSortAsc ? a.price.compareTo(b.price) : b.price.compareTo(a.price));
     print('Nombre d\'éléments affichés: ${_displayedExpenses.length}');
     setState(() {});
+  }
+
+  // Save to a app-specific folder inside Documents
+  Future<String> _getExcelSavePath(String fileName) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final folder = Directory('${directory.path}/MyAppExcelReports');
+    if (!(await folder.exists())) {
+      await folder.create(recursive: true);
+    }
+    return '${folder.path}/$fileName';
+  }
+
+  Future<void> _openExcelFile(String filePath) async {
+    final result = await OpenFile.open(filePath);
+    if (result.type != ResultType.done) {
+      print('Cannot open file: ${result.message}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cannot open file: ${result.message}')),
+      );
+    }
+  }
+
+  Future<void> _generateExcel() async {
+    List<Map<String, dynamic>> purchases =
+    _displayedExpenses.map((exp) => {
+      'date': exp.date,
+      'price': exp.price,
+      'title': exp.title,
+      'amount': exp.amount,
+      'category': exp.category.toString(),
+    }).toList();
+
+    final Workbook workbook = Workbook();
+    final Worksheet sheet = workbook.worksheets[0];
+
+    sheet.getRangeByName('A1').setText('Date');
+    sheet.getRangeByName('B1').setText('Price');
+    sheet.getRangeByName('C1').setText('Title');
+    sheet.getRangeByName('D1').setText('Amount');
+    sheet.getRangeByName('E1').setText('Category');
+
+    for (int i = 0; i < purchases.length; i++) {
+      final row = i + 2;
+      sheet.getRangeByIndex(row, 1).setDateTime(purchases[i]['date']);
+      sheet.getRangeByIndex(row, 2).setNumber(purchases[i]['price']);
+      sheet.getRangeByIndex(row, 3).setText(purchases[i]['title']);
+      sheet.getRangeByIndex(row, 4).setNumber(purchases[i]['amount']);
+      sheet.getRangeByIndex(row, 5).setText(purchases[i]['category']);
+    }
+
+    int totalRow = purchases.length + 2;
+    sheet.getRangeByIndex(totalRow, 1).setText('Total');
+    sheet.getRangeByIndex(totalRow, 6).setFormula(
+        '=SUMPRODUCT(B2:B${purchases.length + 1}, D2:D${purchases.length + 1})');
+
+    final List<int> bytes = workbook.saveAsStream();
+    workbook.dispose();
+
+    // Ask user for filename with default suggested
+    final fileName = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        TextEditingController controller =
+        TextEditingController(text: "expenses_report.xlsx");
+        return AlertDialog(
+          title: const Text('Enter file name'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: "Filename with .xlsx"),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () =>
+                    Navigator.pop(context, controller.text.trim()),
+                child: const Text('Save')),
+          ],
+        );
+      },
+    );
+
+    if (fileName == null || fileName.isEmpty) return;
+
+    final path = await _getExcelSavePath(fileName);
+    final file = File(path);
+    await file.writeAsBytes(bytes, flush: true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Excel file saved at $path')),
+    );
+
+    await _openExcelFile(path);
   }
 
   void _refreshCartBadge() {
@@ -100,10 +194,8 @@ class _ExpensesListState extends State<ExpensesList> {
                 icon: const Icon(Icons.shopping_cart_outlined),
                 tooltip: 'Voir le panier',
                 onPressed: () async {
-                  await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const CartView()));
+                  await Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const CartView()));
                   _refreshCartBadge();
                 },
               ),
@@ -126,15 +218,20 @@ class _ExpensesListState extends State<ExpensesList> {
             icon: const Icon(Icons.add),
             tooltip: 'Ajouter une dépense',
             onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ExpensesAdd()))
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => const ExpensesAdd()))
                   .then((newExpense) {
                 if (newExpense != null) {
                   _loadExpenses();
                 }
               });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Exporter en Excel',
+            onPressed: () async {
+              await _generateExcel();
             },
           ),
         ],
@@ -167,17 +264,21 @@ class _ExpensesListState extends State<ExpensesList> {
           children: [
             _buildExpenseSection(ExpensesCategory.Manga, 'Manga', Colors.red),
             const SizedBox(height: 16),
-            _buildExpenseSection(ExpensesCategory.Merchandise, 'Merchandise', Colors.blue),
+            _buildExpenseSection(
+                ExpensesCategory.Merchandise, 'Merchandise', Colors.blue),
             const SizedBox(height: 16),
-            _buildExpenseSection(ExpensesCategory.EventTicket, 'Billets d\'événement', Colors.yellow),
+            _buildExpenseSection(
+                ExpensesCategory.EventTicket, 'Billets d\'événement', Colors.green),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildExpenseSection(ExpensesCategory category, String title, Color color) {
-    final sectionExpenses = _displayedExpenses.where((exp) => exp.category == category).toList();
+  Widget _buildExpenseSection(
+      ExpensesCategory category, String title, Color color) {
+    final sectionExpenses =
+    _displayedExpenses.where((exp) => exp.category == category).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +345,6 @@ class _ExpensesListState extends State<ExpensesList> {
           child: ExpensesGridItem(
             expense: expense,
             sectionColor: color,
-            // Dans _buildExpenseGrid, lors du tap sur un item
             onTap: () async {
               await Navigator.push(
                 context,
@@ -253,11 +353,9 @@ class _ExpensesListState extends State<ExpensesList> {
                     expense: expense,
                     onUpdate: (updatedExpense) async {
                       await _viewModel.updateExpense(updatedExpense);
-                      // Supprime _loadExpenses() ici car update déjà fait
                     },
                     onDelete: (id) async {
                       await _viewModel.deleteExpense(id);
-                      // Supprime _loadExpenses() ici car delete déjà fait
                     },
                   ),
                 ),
@@ -265,8 +363,6 @@ class _ExpensesListState extends State<ExpensesList> {
               await _loadExpenses();
               _refreshCartBadge();
             },
-
-
           ),
         );
       },
