@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:open_file/open_file.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
@@ -70,14 +71,29 @@ class _ExpensesListState extends State<ExpensesList> {
     setState(() {});
   }
 
-  // Save to a app-specific folder inside Documents
-  Future<String> _getExcelSavePath(String fileName) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final folder = Directory('${directory.path}/MyAppExcelReports');
-    if (!(await folder.exists())) {
-      await folder.create(recursive: true);
+  Future<bool> _requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+      }
+      return status.isGranted;
     }
-    return '${folder.path}/$fileName';
+    // iOS does not need external storage permissions
+    return true;
+  }
+
+  Future<String?> _getDownloadDirectoryPath() async {
+    if (Platform.isAndroid) {
+      final directories =
+      await getExternalStorageDirectories(type: StorageDirectory.downloads);
+      if (directories == null || directories.isEmpty) return null;
+      return directories.first.path;
+    } else if (Platform.isIOS) {
+      final dir = await getApplicationDocumentsDirectory();
+      return dir.path;
+    }
+    return null;
   }
 
   Future<void> _openExcelFile(String filePath) async {
@@ -126,7 +142,23 @@ class _ExpensesListState extends State<ExpensesList> {
     final List<int> bytes = workbook.saveAsStream();
     workbook.dispose();
 
-    // Ask user for filename with default suggested
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Storage permission denied')),
+      );
+      return;
+    }
+
+    final downloadPath = await _getDownloadDirectoryPath();
+    if (downloadPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to get download directory')),
+      );
+      return;
+    }
+
+    // Ask user for filename
     final fileName = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -153,15 +185,15 @@ class _ExpensesListState extends State<ExpensesList> {
 
     if (fileName == null || fileName.isEmpty) return;
 
-    final path = await _getExcelSavePath(fileName);
-    final file = File(path);
+    final filePath = '$downloadPath/$fileName';
+    final file = File(filePath);
     await file.writeAsBytes(bytes, flush: true);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Excel file saved at $path')),
+      SnackBar(content: Text('Excel file saved at $filePath')),
     );
 
-    await _openExcelFile(path);
+    await _openExcelFile(filePath);
   }
 
   void _refreshCartBadge() {
