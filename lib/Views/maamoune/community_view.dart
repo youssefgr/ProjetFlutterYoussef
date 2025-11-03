@@ -4,6 +4,9 @@ import '../../Models/maamoune/community.dart';
 import '../../Models/maamoune/user.dart';
 import '../../viewmodels/maamoune/community_viewmodel.dart';
 import '../../viewmodels/maamoune/user_viewmodel.dart';
+import '../../viewmodels/maamoune/community_post_view_model.dart';
+import '../../Models/maamoune/community_post.dart';
+import '../../Views/maamoune/community_detail_view.dart';
 
 enum CommunityFilter { all, myCommunities, joined, notJoined }
 enum CommunitySortBy { name, memberCount, newest, oldest }
@@ -458,6 +461,21 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
     return colors[index % colors.length];
   }
 
+  void _navigateToCommunityDetail(Community community) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => CommunityPostViewModel(),
+          child: CommunityDetailScreen(
+            community: community,
+            currentUserId: currentUserId,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAllCommunitiesTab() {
     return Consumer<CommunityViewModel>(
       builder: (context, viewModel, child) {
@@ -511,90 +529,102 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color.withOpacity(0.1), Colors.white],
+              child: InkWell(
+                onTap: () => _navigateToCommunityDetail(community),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [color.withOpacity(0.1), Colors.white],
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.groups, color: Colors.white, size: 28),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  community.name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                if (role.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // Main content area - tappable
+                            Expanded(
+                              child: Row(
+                                children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    width: 56,
+                                    height: 56,
                                     decoration: BoxDecoration(
-                                      color: _getRoleColor(community).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: color,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Text(
-                                      role,
-                                      style: TextStyle(
-                                        color: _getRoleColor(community),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: const Icon(Icons.groups, color: Colors.white, size: 28),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          community.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        if (role.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: _getRoleColor(community).withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              role,
+                                              style: TextStyle(
+                                                color: _getRoleColor(community),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          _buildCommunityActions(community),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        community.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.people, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${community.memberIds.length} members',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          ),
-                          const SizedBox(width: 16),
-                          Icon(Icons.admin_panel_settings, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${community.adminIds.length + 1} admins',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    ],
+                            // Actions area - not tappable for navigation
+                            _buildCommunityActions(community),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          community.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.people, size: 14, color: Colors.grey[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${community.memberIds.length} members',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                            const SizedBox(width: 16),
+                            Icon(Icons.admin_panel_settings, size: 14, color: Colors.grey[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${community.adminIds.length + 1} admins',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -639,43 +669,47 @@ class _CommunityScreenState extends State<CommunityScreen> with SingleTickerProv
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: () => _navigateToCommunityDetail(community),
+                borderRadius: BorderRadius.circular(16),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.groups, color: Colors.white, size: 28),
                   ),
-                  child: const Icon(Icons.groups, color: Colors.white, size: 28),
-                ),
-                title: Text(
-                  community.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _getRoleColor(community).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _getUserRole(community),
-                        style: TextStyle(
-                          color: _getRoleColor(community),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                  title: Text(
+                    community.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getRoleColor(community).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _getUserRole(community),
+                          style: TextStyle(
+                            color: _getRoleColor(community),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  trailing: _buildCommunityActions(community),
                 ),
-                trailing: _buildCommunityActions(community),
               ),
             );
           },

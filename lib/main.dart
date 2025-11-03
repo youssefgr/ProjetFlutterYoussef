@@ -8,7 +8,10 @@ import 'services/maamoune/notification_service.dart';
 
 
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
+  NotificationService.startPeriodicRecommendations();
   runApp(
     MultiProvider(
       providers: [
