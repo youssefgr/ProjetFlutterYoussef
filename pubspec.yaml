@@ -1,0 +1,50 @@
+name: projetflutteryoussef
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 📦 Librairies principales
+  cupertino_icons: ^1.0.8
+  http: ^1.5.0
+  flutter_dotenv: ^5.1.0
+
+  # 📸 Gestion d'images et fichiers
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+
+  # 🔑 Génération d'identifiants uniques
+  uuid: ^4.5.1
+
+  # ☁️ Connexion à Supabase (Base de données + Auth + Storage)
+  supabase_flutter: ^2.5.6
+
+  # 🔄 Gestion d'état (architecture MVVM, Providers)
+  provider: ^6.1.2
+  google_sign_in: ^6.2.1
+  googleapis: ^13.2.0         # contient drive_v3
+  googleapis_auth: ^1.6.0
+  crypto: ^3.0.5              # md5 pour doublons
+  mime: ^2.0.0                # déduire content-type upload
+  url_launcher: ^6.2.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # ✅ Bonnes pratiques et règles de style
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+  # 📁 Déclaration du dossier des assets
+ 
