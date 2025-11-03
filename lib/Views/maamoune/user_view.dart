@@ -13,8 +13,11 @@ class UserScreen extends StatefulWidget {
 }
 
 class _UserScreenState extends State<UserScreen> {
-  // Simulated current logged-in user ID (in real app, this comes from auth)
   final String currentUserId = 'current_user_123';
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -23,6 +26,80 @@ class _UserScreenState extends State<UserScreen> {
       context.read<UserViewModel>().fetchUsers();
       context.read<FriendshipViewModel>().fetchFriendships();
     });
+  }
+
+  void _showAddUserDialog() {
+    _usernameController.clear();
+    _emailController.clear();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.person_add, color: Theme.of(context).primaryColor),
+            const SizedBox(width: 8),
+            const Text('Add Test User'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Add users to test friend requests and communities',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: 'Username',
+                prefixIcon: const Icon(Icons.person),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                prefixIcon: const Icon(Icons.email),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_usernameController.text.isNotEmpty && _emailController.text.isNotEmpty) {
+                final newUser = User(
+                  userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
+                  username: _usernameController.text,
+                  email: _emailController.text,
+                  avatarUrl: 'https://ui-avatars.com/api/?name=${_usernameController.text}',
+                );
+                context.read<UserViewModel>().addUser(newUser);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${newUser.username} added successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _sendFriendRequest(User user) {
@@ -87,7 +164,6 @@ class _UserScreenState extends State<UserScreen> {
     final friendship = friendshipViewModel.getFriendshipBetween(currentUserId, user.userId);
 
     if (friendship == null) {
-      // Not friends, show Add Friend button
       return ElevatedButton.icon(
         onPressed: () => _sendFriendRequest(user),
         icon: const Icon(Icons.person_add, size: 18),
@@ -135,6 +211,15 @@ class _UserScreenState extends State<UserScreen> {
     return const SizedBox.shrink();
   }
 
+  List<User> _getFilteredUsers(List<User> users) {
+    if (_searchQuery.isEmpty) return users;
+
+    return users.where((user) {
+      return user.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,35 +239,68 @@ class _UserScreenState extends State<UserScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: Row(
+                child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.people, color: Colors.white, size: 28),
-                    ),
-                    const SizedBox(width: 16),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text(
-                          "All Users",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: const Icon(Icons.people, color: Colors.white, size: 28),
                         ),
-                        Text(
-                          "Connect with other users",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
+                        const SizedBox(width: 16),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "All Users",
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Connect with other users",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search users by name or email...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -190,7 +308,10 @@ class _UserScreenState extends State<UserScreen> {
               Expanded(
                 child: Consumer2<UserViewModel, FriendshipViewModel>(
                   builder: (context, userViewModel, friendshipViewModel, child) {
-                    if (userViewModel.users.isEmpty) {
+                    final allUsers = userViewModel.users;
+                    final filteredUsers = _getFilteredUsers(allUsers);
+
+                    if (allUsers.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -211,7 +332,36 @@ class _UserScreenState extends State<UserScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Users will appear here when they sign up',
+                              'Add test users to get started',
+                              style: TextStyle(color: Colors.grey[400]),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (filteredUsers.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 80,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No users found',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Try a different search term',
                               style: TextStyle(color: Colors.grey[400]),
                             ),
                           ],
@@ -221,9 +371,9 @@ class _UserScreenState extends State<UserScreen> {
 
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: userViewModel.users.length,
+                      itemCount: filteredUsers.length,
                       itemBuilder: (context, index) {
-                        final user = userViewModel.users[index];
+                        final user = filteredUsers[index];
                         return Card(
                           elevation: 2,
                           margin: const EdgeInsets.only(bottom: 12),
@@ -290,6 +440,19 @@ class _UserScreenState extends State<UserScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddUserDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Test User'),
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    super.dispose();
   }
 }

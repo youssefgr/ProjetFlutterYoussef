@@ -4,6 +4,9 @@ import 'package:projetflutteryoussef/viewmodels/maamoune/user_viewmodel.dart';
 import 'package:projetflutteryoussef/viewmodels/maamoune/community_viewmodel.dart';
 import 'package:projetflutteryoussef/viewmodels/maamoune/friendship_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'services/maamoune/notification_service.dart';
+
+
 
 void main() {
   runApp(
