@@ -24,7 +24,7 @@ class ExpensesGridItem extends StatelessWidget {
         width: 130,
         height: 170,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           boxShadow: const [
             BoxShadow(
