@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'expenses_delete.dart';
-import 'package:projetflutteryoussef/Views/Youssef/Expenses Crud/expenses_edit.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_edit.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
 
 class ExpensesDetail extends StatefulWidget {
@@ -46,6 +47,7 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentExpense.title),
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -53,7 +55,11 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ExpensesEdit(expense: _currentExpense)),
+                MaterialPageRoute(
+                  builder: (context) => ExpensesEdit(
+                    expense: _currentExpense,
+                  ),
+                ),
               ).then((updatedExpense) {
                 if (updatedExpense != null && updatedExpense is Expenses) {
                   _handleUpdate(updatedExpense);
@@ -70,9 +76,11 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                 builder: (context) => ExpensesDelete(
                   expense: _currentExpense,
                   onDelete: () {
-                    if (widget.onDelete != null) widget.onDelete!(_currentExpense.id);
-                    Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Close detail page after deletion
+                    if (widget.onDelete != null) {
+                      widget.onDelete!(_currentExpense.id);
+                    }
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                   },
                 ),
               );
@@ -81,152 +89,389 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ✨ IMAGE AMÉLIORÉE DEPUIS SUPABASE
             _buildExpenseImage(),
-            const SizedBox(height: 24),
-            Text(
-              _currentExpense.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+
+            // ✨ INFOS PRINCIPALES
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Titre principal
+                  Text(
+                    _currentExpense.title,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Catégorie avec couleur
+                  _buildCategoryBadge(),
+                  const SizedBox(height: 24),
+
+                  // ✨ SECTION INFOS EN CARTES
+                  _buildInfoCard(
+                    icon: Icons.calendar_today,
+                    label: 'Date',
+                    value:
+                    '${_currentExpense.date.day}/${_currentExpense.date.month}/${_currentExpense.date.year}',
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildInfoCard(
+                    icon: Icons.shopping_bag,
+                    label: 'Quantité',
+                    value: _currentExpense.amount.toStringAsFixed(0),
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildInfoCard(
+                    icon: Icons.euro,
+                    label: 'Prix',
+                    value: '${_currentExpense.price.toStringAsFixed(2)} €',
+                    color: Colors.green,
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildInfoCard(
+                    icon: Icons.person,
+                    label: 'Utilisateur',
+                    value: _currentExpense.userId,
+                    color: Colors.purple,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ✨ BOUTON AJOUTER AU PANIER
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.shopping_cart),
+                      label: const Text(
+                        'Add to Cart',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onPressed: () => _showAddToCartDialog(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildInfoChip('Category', _currentExpense.category.name, Colors.blue),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow('Date',
-                '${_currentExpense.date.day}/${_currentExpense.date.month}/${_currentExpense.date.year}'),
-            const SizedBox(height: 16),
-            _buildInfoRow('Available', _currentExpense.amount.toStringAsFixed(0)),
-            const SizedBox(height: 8),
-            _buildInfoRow('Price', '${_currentExpense.price.toStringAsFixed(2)} €'),
-            const SizedBox(height: 16),
-            _buildInfoRow('User ID', _currentExpense.userId),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green,
-        icon: const Icon(Icons.shopping_cart),
-        label: const Text('Add to Cart'),
-        onPressed: () => _showAddToCartDialog(context),
       ),
     );
   }
 
+  // ✨ IMAGE DEPUIS SUPABASE
   Widget _buildExpenseImage() {
     if (_currentExpense.imageURL.isEmpty) {
       return Container(
         width: double.infinity,
         height: 300,
         decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.image, size: 80, color: Colors.grey),
-            SizedBox(height: 8),
-            Text('No Image', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            Icon(
+              Icons.image,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No Image Available',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       );
     }
 
-    return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(_currentExpense.imageURL),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              snapshot.data!,
-              width: double.infinity,
-              height: 300,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-
-        return Container(
+    return Stack(
+      children: [
+        Container(
           width: double.infinity,
           height: 300,
           decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            color: Colors.grey.shade200,
           ),
-          child: const Center(
-            child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
+          child: ClipRRect(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            child: Image.network(
+              _currentExpense.imageURL,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.broken_image,
+                        size: 80,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load image',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInfoChip(String label, String value, Color color) {
-    return Chip(
-      backgroundColor: color.withOpacity(0.2),
-      label: Text(
-        '$label: $value',
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            )),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 16)),
+        ),
+        // Badge de catégorie sur l'image
+        Positioned(
+          top: 16,
+          right: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: _getCategoryColor().withOpacity(0.9),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              _currentExpense.category.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
+  // ✨ BADGE CATÉGORIE
+  Widget _buildCategoryBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: _getCategoryColor().withOpacity(0.15),
+        border: Border.all(
+          color: _getCategoryColor(),
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        _currentExpense.category.name,
+        style: TextStyle(
+          color: _getCategoryColor(),
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  // ✨ CARTES D'INFO AMÉLIORÉES
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✨ RÉCUPÈRE LA COULEUR DE LA CATÉGORIE
+  Color _getCategoryColor() {
+    switch (_currentExpense.category) {
+      case ExpensesCategory.Manga:
+        return Colors.red;
+      case ExpensesCategory.Merchandise:
+        return Colors.blue;
+      case ExpensesCategory.EventTicket:
+        return Colors.green;
+    }
+  }
+
+  // ✨ DIALOG AJOUTER AU PANIER AMÉLIORÉ
   void _showAddToCartDialog(BuildContext context) {
-    final TextEditingController qtyController = TextEditingController(text: "1");
+    final TextEditingController qtyController =
+    TextEditingController(text: "1");
     final cart = CartManager();
-    final scaffoldContext = ScaffoldMessenger.of(context);
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('Add "${_currentExpense.title}" to cart'),
+          title: const Text('Add to Cart'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Enter quantity to add:'),
-              const SizedBox(height: 10),
-              TextFormField(
+              Text(
+                'Product: ${_currentExpense.title}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Enter quantity to add:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
                 controller: qtyController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: 'Quantity (max: ${_currentExpense.amount.toInt()})',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  hintText:
+                  'Max: ${_currentExpense.amount.toInt()} available',
+                  prefixIcon: const Icon(Icons.shopping_bag),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Price: ${_currentExpense.price.toStringAsFixed(2)} € per unit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -237,16 +482,23 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
               child: const Text('Cancel'),
             ),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               icon: const Icon(Icons.add_shopping_cart),
               label: const Text('Add'),
               onPressed: () {
                 final qty = int.tryParse(qtyController.text) ?? 0;
 
-                if (qty <= 0 || qty > _currentExpense.amount) {
-                  scaffoldContext.showSnackBar(
-                    const SnackBar(
-                      content: Text('Invalid quantity selected!'),
+                if (qty <= 0 || qty > _currentExpense.amount.toInt()) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please enter a quantity between 1 and ${_currentExpense.amount.toInt()}',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -256,17 +508,22 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                 cart.addToCart(_currentExpense, qty);
                 Navigator.pop(dialogContext);
 
-                scaffoldContext.showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('$qty × "${_currentExpense.title}" added to cart!'),
+                    content: Text(
+                      '✅ $qty × "${_currentExpense.title}" added to cart!',
+                    ),
                     backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
                     action: SnackBarAction(
                       label: 'View Cart',
                       textColor: Colors.white,
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const CartView()),
+                          MaterialPageRoute(
+                            builder: (context) => const CartView(),
+                          ),
                         );
                       },
                     ),

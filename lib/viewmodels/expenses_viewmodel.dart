@@ -1,16 +1,19 @@
+import 'dart:io';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
+import 'package:projetflutteryoussef/repositories/expenses_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesViewModel {
+  final ExpensesRepository _repository = ExpensesRepository();
+
   List<Expenses> _expensesList = [];
   List<Expenses> get expensesList => _expensesList;
 
   // Callback déclenché lorsque la liste des dépenses change
   Function()? onExpensesUpdated;
 
-  // Charger les dépenses depuis Supabase sans `.execute()`
+  // ✨ Charger les dépenses depuis Supabase
   Future<void> loadExpenses() async {
     try {
       final data = await Supabase.instance.client
@@ -18,109 +21,217 @@ class ExpensesViewModel {
           .select()
           .order('date', ascending: false);
 
-      // data est une List<dynamic> venant de Supabase
       _expensesList = (data as List).map((json) => Expenses.fromJson(json)).toList();
-
       onExpensesUpdated?.call();
+      print('✅ ${_expensesList.length} expenses loaded');
     } catch (e) {
-      print('Erreur chargement dépenses : $e');
+      print('❌ Erreur chargement dépenses : $e');
+      rethrow;
     }
   }
 
-  // Ajouter une dépense sans `.execute()`
-  Future<void> addExpense(Expenses expense) async {
+  // ✨ Ajouter une dépense AVEC UPLOAD D'IMAGE
+  Future<void> addExpense(
+      String title,
+      ExpensesCategory category,
+      DateTime date,
+      double amount,
+      double price,
+      File? imageFile,
+      ) async {
     try {
-      await Supabase.instance.client
-          .from('Expenses')
-          .upsert({
-        'id': expense.id,
-        'title': expense.title,
-        'category': expense.category.name,
-        'date': expense.date.toIso8601String(),
-        'amount': expense.amount,
-        'price': expense.price,
-        'imageURL': expense.imageURL,
-        'userId': expense.userId,
-      });
+      String imageUrl = '';
 
-      _expensesList.add(expense);
-      onExpensesUpdated?.call();
-    } catch (e) {
-      print('Erreur ajout dépense : $e');
-    }
-  }
+      // Upload l'image si elle existe
+      if (imageFile != null) {
+        imageUrl = await _repository.uploadExpenseImage(
+          imageFile.path,
+          title,
+        ) ?? '';
 
-  // Mettre à jour une dépense existante sans `.execute()`
-  Future<void> updateExpense(Expenses updatedExpense) async {
-    try {
-      print('Update expense id: ${updatedExpense.id}');
-      await Supabase.instance.client
-          .from('Expenses')
-          .update({
-        'title': updatedExpense.title,
-        'category': updatedExpense.category.name,
-        'date': updatedExpense.date.toIso8601String(),
-        'amount': updatedExpense.amount,
-        'price': updatedExpense.price,
-        'imageURL': updatedExpense.imageURL,
-        'userId': updatedExpense.userId,
-      })
-          .eq('id', updatedExpense.id);
-
-      final index = _expensesList.indexWhere((item) => item.id == updatedExpense.id);
-      if (index != -1) {
-        _expensesList[index] = updatedExpense;
-        onExpensesUpdated?.call();
+        if (imageUrl.isEmpty) {
+          throw Exception('Failed to upload image');
+        }
+        print('✅ Image uploaded: $imageUrl');
       }
-      print('Update completed');
-    } catch (e) {
-      print('Erreur mise à jour dépense : $e');
-    }
-  }
 
+      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'anonymous';
 
-  // Supprimer une dépense sans `.execute()`
-  Future<void> deleteExpense(String id) async {
-    try {
-      final expense = _expensesList.firstWhere(
-            (item) => item.id == id,
-        orElse: () => throw Exception('Expense not found'),
+      final newExpense = Expenses(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        category: category,
+        date: date,
+        amount: amount,
+        price: price,
+        imageURL: imageUrl,
+        userId: userId,
       );
 
-      if (expense.imageURL.isNotEmpty) {
-        await ImageUtils.deleteImage(expense.imageURL);
-      }
+      // Sauvegarder en base de données
+      await _repository.addExpenseToDatabase(newExpense);
 
-      // Appel Supabase pour suppression
-      final _ = await Supabase.instance.client
-          .from('Expenses')
-          .delete()
-          .eq('id', id);
-
-      _expensesList.removeWhere((item) => item.id == id);
+      _expensesList.add(newExpense);
       onExpensesUpdated?.call();
+      print('✅ Expense added successfully');
     } catch (e) {
-      print('Erreur suppression dépense : $e');
+      print('❌ Erreur ajout dépense : $e');
+      rethrow;
     }
   }
 
+  // ✨ Mettre à jour une dépense (avec possibilité d'image)
+  Future<void> updateExpense(
+      String id,
+      String title,
+      ExpensesCategory category,
+      DateTime date,
+      double amount,
+      double price,
+      File? newImageFile,
+      String? existingImageUrl,
+      ) async {
+    try {
+      String imageUrl = existingImageUrl ?? '';
 
+      // Si une nouvelle image est fournie
+      if (newImageFile != null) {
+        imageUrl = await _repository.uploadExpenseImage(
+          newImageFile.path,
+          title,
+        ) ?? existingImageUrl ?? '';
+        print('✅ New image uploaded: $imageUrl');
+      }
 
-  // Les autres méthodes restent inchangées...
+      // Trouver l'index et obtenir les données actuelles
+      final index = _expensesList.indexWhere((item) => item.id == id);
+      if (index == -1) {
+        throw Exception('Expense not found');
+      }
 
+      final updatedExpense = Expenses(
+        id: id,
+        title: title,
+        category: category,
+        date: date,
+        amount: amount,
+        price: price,
+        imageURL: imageUrl,
+        userId: _expensesList[index].userId,
+      );
+
+      // Mettre à jour en base de données
+      await _repository.updateExpense(updatedExpense);
+
+      _expensesList[index] = updatedExpense;
+      onExpensesUpdated?.call();
+      print('✅ Expense updated successfully');
+    } catch (e) {
+      print('❌ Erreur mise à jour dépense : $e');
+      rethrow;
+    }
+  }
+
+  // ✨ Supprimer une dépense (avec suppression d'image Supabase)
+  Future<void> deleteExpense(String id) async {
+    try {
+      final expenseIndex = _expensesList.indexWhere(
+            (item) => item.id == id,
+      );
+
+      if (expenseIndex == -1) {
+        throw Exception('Expense not found');
+      }
+
+      final expense = _expensesList[expenseIndex];
+
+      // Supprimer l'image de Supabase Storage si elle existe
+      if (expense.imageURL.isNotEmpty) {
+        await _deleteImageFromSupabase(expense.imageURL);
+        print('✅ Image deleted from storage');
+      }
+
+      // Supprimer de la base de données
+      await _repository.deleteExpense(id);
+
+      _expensesList.removeAt(expenseIndex);
+      onExpensesUpdated?.call();
+      print('✅ Expense deleted successfully');
+    } catch (e) {
+      print('❌ Erreur suppression dépense : $e');
+      rethrow;
+    }
+  }
+
+  // ✨ Supprimer une image de Supabase Storage
+  Future<void> _deleteImageFromSupabase(String imageUrl) async {
+    try {
+      // Extraire le chemin du fichier à partir de l'URL
+      // Format: https://xxxxx.supabase.co/storage/v1/object/public/expenses/filename
+      final uri = Uri.parse(imageUrl);
+      final pathSegments = uri.pathSegments;
+
+      // Trouver l'index où commence le chemin du bucket
+      int expensesIndex = pathSegments.indexOf('expenses');
+      if (expensesIndex != -1) {
+        final filePath = pathSegments.sublist(expensesIndex).join('/');
+
+        await Supabase.instance.client.storage
+            .from('expenses')
+            .remove([filePath]);
+
+        print('✅ File deleted: $filePath');
+      }
+    } catch (e) {
+      print('⚠️ Warning: Could not delete image from storage: $e');
+      // Ne pas lever d'erreur ici, car ce n'est pas critique
+    }
+  }
+
+  // Récupérer les dépenses par catégorie
   List<Expenses> getExpensesByCategory(ExpensesCategory category) {
     return _expensesList.where((expense) => expense.category == category).toList();
   }
 
+  // Récupérer les dépenses par utilisateur
   List<Expenses> getExpensesByUser(String userId) {
     return _expensesList.where((expense) => expense.userId == userId).toList();
   }
 
+  // Montant total (quantité)
   double getTotalAmount() {
     return _expensesList.fold(0.0, (sum, item) => sum + item.amount);
   }
 
+  // Prix total
   double getTotalPrice() {
     return _expensesList.fold(0.0, (sum, item) => sum + item.price);
+  }
+
+  // Montant total par catégorie
+  double getTotalPriceByCategory(ExpensesCategory category) {
+    return _expensesList
+        .where((expense) => expense.category == category)
+        .fold(0.0, (sum, item) => sum + item.price);
+  }
+
+  // Nombre de dépenses
+  int getTotalExpensesCount() {
+    return _expensesList.length;
+  }
+
+  // Nombre de dépenses par catégorie
+  int getExpensesCountByCategory(ExpensesCategory category) {
+    return _expensesList.where((expense) => expense.category == category).length;
+  }
+
+  // Rafraîchir la liste
+  Future<void> refresh() async {
+    await loadExpenses();
+  }
+
+  // Nettoyer les ressources
+  void dispose() {
+    onExpensesUpdated = null;
   }
 }

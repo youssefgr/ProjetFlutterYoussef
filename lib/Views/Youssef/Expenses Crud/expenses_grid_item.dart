@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
-import 'package:projetflutteryoussef/utils/image_utils.dart';
 
 class ExpensesGridItem extends StatelessWidget {
   final Expenses expense;
@@ -17,129 +15,214 @@ class ExpensesGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 130,
-        height: 170,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-          border: Border.all(color: sectionColor.withOpacity(0.3), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 100,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-              ),
-              child: _buildExpenseImage(),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+    final isOutOfStock = expense.amount <= 0;
+
+    return SizedBox(
+      width: 140,
+      child: GestureDetector(
+        onTap: isOutOfStock ? null : onTap,
+        child: Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                Column(
                   children: [
-                    Text(
-                      _truncateTitle(expense.title, 18),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                    // Image
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        width: double.infinity,
+                        color: Colors.grey.shade200,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (expense.imageURL.isNotEmpty)
+                              Image.network(
+                                expense.imageURL,
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: sectionColor.withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      color: sectionColor.withOpacity(0.5),
+                                      size: 40,
+                                    ),
+                                  );
+                                },
+                              )
+                            else
+                              Container(
+                                color: sectionColor.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  color: sectionColor.withOpacity(0.5),
+                                  size: 40,
+                                ),
+                              ),
+                            // Badge catégorie
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: sectionColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  expense.category.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // ✨ BADGE OUT OF STOCK
+                            if (isOutOfStock)
+                              Container(
+                                color: Colors.black.withOpacity(0.6),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.block,
+                                        color: Colors.white,
+                                        size: 32,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'OUT OF STOCK',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      expense.category.name,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${expense.price.toStringAsFixed(2)} €',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: sectionColor,
-                        fontWeight: FontWeight.bold,
+                    // Infos
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.grey.shade200,
+                            ),
+                          ),
+                          color: isOutOfStock
+                              ? Colors.grey.shade100
+                              : Colors.white,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              expense.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: isOutOfStock
+                                    ? Colors.grey.shade500
+                                    : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '€${expense.price.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: isOutOfStock
+                                        ? Colors.grey.shade400
+                                        : sectionColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                // ✨ AFFICHAGE QUANTITÉ
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isOutOfStock
+                                        ? Colors.red.shade100
+                                        : sectionColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    isOutOfStock
+                                        ? '0 left'
+                                        : '${expense.amount.toInt()} left',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: isOutOfStock
+                                          ? Colors.red
+                                          : sectionColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                // ✨ COUCHE DÉSACTIVATION SI OUT OF STOCK
+                if (isOutOfStock)
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.transparent,
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  Widget _buildExpenseImage() {
-    if (expense.imageURL.isEmpty) {
-      return Container(
-        color: Colors.grey[200],
-        child: const Center(
-          child: Icon(Icons.receipt_long, size: 40, color: Colors.grey),
-        ),
-      );
-    }
-
-    return FutureBuilder<File?>(
-      future: ImageUtils.getImageFile(expense.imageURL),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            color: Colors.grey[200],
-            alignment: Alignment.center,
-            child: CircularProgressIndicator(color: sectionColor),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(8),
-              topRight: Radius.circular(8),
-            ),
-            child: Image.file(
-              snapshot.data!,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          );
-        }
-
-        return Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
-          ),
-        );
-      },
-    );
-  }
-
-  String _truncateTitle(String title, int maxLength) {
-    if (title.length <= maxLength) return title;
-    return '${title.substring(0, maxLength)}...';
   }
 }
