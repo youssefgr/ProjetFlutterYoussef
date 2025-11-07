@@ -109,7 +109,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: Colors.white70,
+                fillColor: Colors.black,
               ),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
