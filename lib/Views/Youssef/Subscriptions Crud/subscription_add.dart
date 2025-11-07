@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:projetflutteryoussef/Models/Youssef/subscription_template.dart';
 import 'package:projetflutteryoussef/Models/Youssef/user_subscription.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Subscriptions%20Crud/subscriptions_list.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:projetflutteryoussef/repositories/subscription_repository.dart';
 
@@ -63,7 +64,8 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
                 ? const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
             )
                 : const Icon(Icons.save),
             onPressed: _isSubmitting ? null : _saveSubscription,
@@ -124,7 +126,8 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
                 border: OutlineInputBorder(),
                 helperText: 'Enter the subscription cost',
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please enter a cost';
@@ -165,7 +168,8 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
               title: const Text('Start Date'),
               subtitle: Text(
                 '${_startDate.day}/${_startDate.month}/${_startDate.year}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               trailing: const Icon(Icons.calendar_today),
               onTap: _selectDate,
@@ -202,66 +206,95 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: _templates.length,
-          itemBuilder: (context, index) {
-            final template = _templates[index];
-            final isSelected = _selectedTemplate?.id == template.id;
+        // ✨ ROW DYNAMIQUE ET SLIDABLE
+        SizedBox(
+          height: 160,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                const SizedBox(width: 6),
+                ...List.generate(_templates.length, (index) {
+                  final template = _templates[index];
+                  final isSelected = _selectedTemplate?.id == template.id;
 
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedTemplate = template;
-                  _nameController.text = template.name;
-                });
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.red,
-                    width: isSelected ? 3 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  color: isSelected ? Colors.blue.shade50 : Colors.transparent,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.network(
-                      template.imageUrl,
-                      width: 110,
-                      height: 110,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.subscriptions, size: 60);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedTemplate = template;
+                          _nameController.text = template.name;
+                        });
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      template.name,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      child: Container(
+                        width: 120,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected ? Colors.blue : Colors.grey,
+                            width: isSelected ? 3 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          color: isSelected
+                              ? Colors.blue.shade50
+                              : Colors.transparent,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                template.imageUrl,
+                                width: 100,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 100,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.subscriptions,
+                                        size: 40),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Padding(
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                template.name,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
+                  );
+                }),
+                const SizedBox(width: 6),
+              ],
+            ),
+          ),
         ),
+        const SizedBox(height: 12),
         if (_selectedTemplate == null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -304,7 +337,8 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.image, size: 70, color: Colors.grey.shade400),
+                Icon(Icons.image,
+                    size: 70, color: Colors.grey.shade400),
                 const SizedBox(height: 8),
                 Text(
                   'No image selected',
@@ -440,8 +474,10 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
         name = _selectedTemplate!.name;
       }
 
-      final nextBillingDate = _selectedCycle.calculateNextBillingDate(_startDate);
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'anonymous';
+      final nextBillingDate =
+      _selectedCycle.calculateNextBillingDate(_startDate);
+      final userId =
+          Supabase.instance.client.auth.currentUser?.id ?? 'anonymous';
 
       final subscription = UserSubscription(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -460,13 +496,27 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
 
       if (mounted) {
         if (success) {
-          Navigator.pop(context, subscription);
+          // ✅ Afficher le message de succès en premier
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('✅ Subscription added successfully!'),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
+
+          // Attendre un peu avant de naviguer
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            // ✅ Naviguer vers la page de liste avec replacement
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const SubscriptionsList(),
+              ),
+                  (route) => false,
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

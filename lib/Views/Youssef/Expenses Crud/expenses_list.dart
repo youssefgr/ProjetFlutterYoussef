@@ -566,7 +566,7 @@ class _ExpensesListState extends State<ExpensesList> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: Colors.white70,
+                fillColor: Colors.black,
               ),
               onChanged: (value) {
                 _searchQuery = value;

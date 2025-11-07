@@ -105,4 +105,21 @@ class SubscriptionRepository {
       return null;
     }
   }
+  // Dans subscription_repository.dart
+  Future<List<UserSubscription>> getAllSubscriptions() async {
+    try {
+      final response = await _supabase
+          .from('user_subscriptions')
+          .select()
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => UserSubscription.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('❌ Erreur lors du chargement de tous les abonnements: $e');
+      return [];
+    }
+  }
+
 }
