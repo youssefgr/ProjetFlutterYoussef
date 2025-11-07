@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Models/Youssef/user_subscription.dart';
+import 'package:projetflutteryoussef/Views/Youssef/Subscriptions%20Crud/subscriptions_detail.dart';
 import 'package:projetflutteryoussef/repositories/subscription_repository.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Subscriptions%20Crud/subscription_add.dart';
-
 class SubscriptionsList extends StatefulWidget {
   const SubscriptionsList({super.key});
 
@@ -109,7 +109,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: Colors.black,
+                fillColor: Colors.white70,
               ),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
@@ -339,6 +339,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
     );
   }
 
+  // ✅ MÉTHODE MODIFIÉE AVEC onTap
   Widget _buildSubscriptionCard(UserSubscription sub, Color color) {
     return SizedBox(
       width: 140,
@@ -346,9 +347,22 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: GestureDetector(
+          // 👈 onTap ICI - Navigue vers la page de détail
           onTap: () {
-            print('Tap sur ${sub.name}');
-            // Naviguez vers la page de détail si vous en avez une
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SubscriptionDetail(
+                  subscription: sub,
+                  onDelete: (id) {
+                    _loadSubscriptions(); // Recharger la liste après suppression
+                  },
+                ),
+              ),
+            ).then((_) {
+              // Recharger la liste après retour de la page de détail
+              _loadSubscriptions();
+            });
           },
           child: Column(
             children: [

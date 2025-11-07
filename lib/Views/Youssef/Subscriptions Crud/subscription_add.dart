@@ -58,6 +58,7 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Subscription'),
+        elevation: 0,
         actions: [
           IconButton(
             icon: _isSubmitting
@@ -120,10 +121,13 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             // Cost field
             TextFormField(
               controller: _costController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Cost',
                 prefixText: '€ ',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.euro),
                 helperText: 'Enter the subscription cost',
               ),
               keyboardType:
@@ -144,9 +148,12 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             // Billing cycle
             DropdownButtonFormField<BillingCycle>(
               value: _selectedCycle,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Billing Cycle',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.calendar_month),
               ),
               items: BillingCycle.values.map((cycle) {
                 return DropdownMenuItem(
@@ -184,9 +191,12 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             // Notes
             TextFormField(
               controller: _notesController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Notes (Optional)',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.note),
                 helperText: 'Add any additional information',
               ),
               maxLines: 3,
@@ -197,6 +207,8 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
     );
   }
 
+  // ✨ AMÉLIORATION : Affichage élégant des templates
+  // ✨ MÉTHODE MODIFIÉE : Images qui remplissent le conteneur
   Widget _buildTemplateSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,9 +218,10 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        // ✨ ROW DYNAMIQUE ET SLIDABLE
+
+        // Row avec scroll horizontal et cartes améliorées
         SizedBox(
-          height: 160,
+          height: 200,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -228,62 +241,155 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
                           _nameController.text = template.name;
                         });
                       },
-                      child: Container(
-                        width: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isSelected ? Colors.blue : Colors.grey,
-                            width: isSelected ? 3 : 1,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        transform: Matrix4.identity()
+                          ..scale(isSelected ? 1.05 : 1.0),
+                        child: Card(
+                          elevation: isSelected ? 8 : 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: isSelected ? Colors.blue : Colors.transparent,
+                              width: isSelected ? 2 : 0,
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          color: isSelected
-                              ? Colors.blue.shade50
-                              : Colors.transparent,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                template.imageUrl,
-                                width: 100,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                filterQuality: FilterQuality.high,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 100,
-                                    height: 80,
-                                    decoration: BoxDecoration(
+                          child: Container(
+                            width: 140,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: isSelected
+                                  ? LinearGradient(
+                                colors: [
+                                  Colors.blue.shade50,
+                                  Colors.blue.shade100,
+                                ],
+                              )
+                                  : null,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Column(
+                                children: [
+                                  // 🖼️ IMAGE REMPLISSANT LE CONTENEUR
+                                  Expanded(
+                                    flex: 3,
+                                    child: Container(
+                                      width: double.infinity,
                                       color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(8),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.network(
+                                            template.imageUrl,
+                                            fit: BoxFit.cover,
+                                            filterQuality: FilterQuality.high,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Center(
+                                                child: Icon(
+                                                  Icons.subscriptions,
+                                                  size: 40,
+                                                  color: Colors.grey.shade400,
+                                                ),
+                                              );
+                                            },
+                                            loadingBuilder: (context, child,
+                                                loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child;
+                                              }
+                                              return Center(
+                                                child:
+                                                CircularProgressIndicator(
+                                                  value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                      null
+                                                      ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                      : null,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          // Badge de sélection sur l'image
+                                          if (isSelected)
+                                            Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: Container(
+                                                width: 28,
+                                                height: 28,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(0.3),
+                                                      blurRadius: 4,
+                                                      offset:
+                                                      const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Icon(
+                                                  Icons.check,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                    child: const Icon(Icons.subscriptions,
-                                        size: 40),
-                                  );
-                                },
+                                  ),
+
+                                  // 📝 NOM DU TEMPLATE
+                                  Expanded(
+                                    flex: 1,
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.blue.shade50
+                                            : Colors.white,
+                                        border: Border(
+                                          top: BorderSide(
+                                            color: Colors.grey.shade200,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          template.name,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.w600,
+                                            color: isSelected
+                                                ? Colors.blue.shade700
+                                                : Colors.black87,
+                                            height: 1.2,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Padding(
-                              padding:
-                              const EdgeInsets.symmetric(horizontal: 4),
-                              child: Text(
-                                template.name,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  height: 1.2,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -294,18 +400,64 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+
+        // Message de sélection
         if (_selectedTemplate == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Please select a subscription',
-              style: TextStyle(color: Colors.red, fontSize: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_rounded, color: Colors.red.shade700, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Please select a subscription',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.green.shade700, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You selected: ${_selectedTemplate!.name}',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
     );
   }
+
 
   Widget _buildCustomSubscription() {
     return Column(
@@ -317,39 +469,50 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
         ),
         const SizedBox(height: 16),
 
-        // Image picker
-        Container(
-          height: 150,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: _customImage != null
-              ? ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              _customImage!,
-              fit: BoxFit.cover,
-              width: double.infinity,
+        // Image picker avec meilleur design
+        GestureDetector(
+          onTap: () => _pickImage(ImageSource.gallery),
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.grey.shade300,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey.shade50,
             ),
-          )
-              : Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.image,
-                    size: 70, color: Colors.grey.shade400),
-                const SizedBox(height: 8),
-                Text(
-                  'No image selected',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-              ],
+            child: _customImage != null
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.file(
+                _customImage!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
+            )
+                : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.image_search,
+                      size: 50, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Tap to select image',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
 
+        // Boutons d'image avec design amélioré
         Row(
           children: [
             Expanded(
@@ -357,6 +520,9 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
                 onPressed: () => _pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Gallery'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -365,6 +531,9 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
                 onPressed: () => _pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Camera'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
           ],
@@ -375,10 +544,12 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
         // Name field
         TextFormField(
           controller: _nameController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Subscription Name',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.label),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            prefixIcon: const Icon(Icons.label),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -457,7 +628,6 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
       String name;
 
       if (_isCustom) {
-        // Upload custom image
         final uploadedUrl = await _repository.uploadCustomImage(
           _customImage!.path,
           _nameController.text,
@@ -496,7 +666,6 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
 
       if (mounted) {
         if (success) {
-          // ✅ Afficher le message de succès en premier
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('✅ Subscription added successfully!'),
@@ -505,11 +674,9 @@ class _SubscriptionAddState extends State<SubscriptionAdd> {
             ),
           );
 
-          // Attendre un peu avant de naviguer
           await Future.delayed(const Duration(milliseconds: 500));
 
           if (mounted) {
-            // ✅ Naviguer vers la page de liste avec replacement
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
                 builder: (context) => const SubscriptionsList(),
