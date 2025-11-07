@@ -113,7 +113,8 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
       children: [
         InAppWebView(
           initialUrlRequest: URLRequest(
-            url: WebUri('https://youssefgr.github.io/recaptchayoussef/recaptcha.html'),
+            url: WebUri(
+                'https://youssefgr.github.io/recaptchayoussef/recaptcha.html'),
           ),
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
@@ -131,7 +132,8 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
                 if (args.isNotEmpty) {
                   _tokenReceived = true;
                   String token = args[0].toString();
-                  print('✅ Received reCAPTCHA v2 token: ${token.substring(0, 30)}...');
+                  print(
+                      '✅ Received reCAPTCHA v2 token: ${token.substring(0, 30)}...');
                   widget.onTokenReceived(token);
                 }
               },
@@ -151,7 +153,8 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
             """);
           },
           onConsoleMessage: (controller, consoleMessage) {
-            if (!consoleMessage.message.contains('Uncaught (in promise) null')) {
+            if (!consoleMessage.message
+                .contains('Uncaught (in promise) null')) {
               print('WebView: ${consoleMessage.message}');
             }
           },

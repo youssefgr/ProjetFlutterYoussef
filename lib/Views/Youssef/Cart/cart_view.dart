@@ -4,7 +4,6 @@ import 'package:projetflutteryoussef/utils/recaptcha_service.dart';
 import 'package:projetflutteryoussef/utils/email_service.dart';
 import 'package:projetflutteryoussef/utils/purchase_history_service.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/purchase_history_view.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CartView extends StatefulWidget {
   const CartView({super.key});
@@ -82,6 +81,7 @@ class _CartViewState extends State<CartView> {
           ? _buildEmptyCart()
           : Column(
         children: [
+          // ✨ LISTE DES ITEMS
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
@@ -92,13 +92,18 @@ class _CartViewState extends State<CartView> {
               },
             ),
           ),
+
+          // ✨ SECTION EMAIL
           _buildEmailSection(),
+
+          // ✨ FOOTER AVEC TOTAL ET BOUTON
           _buildCartFooter(),
         ],
       ),
     );
   }
 
+  // ✨ PANIER VIDE
   Widget _buildEmptyCart() {
     return Center(
       child: Column(
@@ -144,6 +149,7 @@ class _CartViewState extends State<CartView> {
     );
   }
 
+  // ✨ ITEM DU PANIER AMÉLIORÉ
   Widget _buildCartItem(Map<String, dynamic> item, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -166,6 +172,7 @@ class _CartViewState extends State<CartView> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
+            // Badge quantité
             Container(
               width: 50,
               height: 50,
@@ -197,6 +204,8 @@ class _CartViewState extends State<CartView> {
               ),
             ),
             const SizedBox(width: 16),
+
+            // Infos du produit
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,6 +264,8 @@ class _CartViewState extends State<CartView> {
                 ],
               ),
             ),
+
+            // Bouton supprimer
             IconButton(
               icon: const Icon(Icons.close, color: Colors.red),
               onPressed: () {
@@ -274,6 +285,7 @@ class _CartViewState extends State<CartView> {
     );
   }
 
+  // ✨ SECTION EMAIL AMÉLIORÉE
   Widget _buildEmailSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -349,19 +361,21 @@ class _CartViewState extends State<CartView> {
     );
   }
 
+  // ✨ FOOTER AVEC TOTAL ET BOUTON PAIEMENT
   Widget _buildCartFooter() {
     final subtotal = cart.totalPrice;
-    final tax = subtotal * 0.20;
+    final tax = subtotal * 0.20; // 20% tax
     final total = subtotal + tax;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+        border: Border(top: BorderSide(color: Colors.black, width: 1)),
         color: Colors.grey.shade50,
       ),
       child: Column(
         children: [
+          // Détails des prix
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -369,7 +383,7 @@ class _CartViewState extends State<CartView> {
                 'Subtotal',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: Colors.black,
                 ),
               ),
               Text(
@@ -377,6 +391,7 @@ class _CartViewState extends State<CartView> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
+                    color: Colors.black
                 ),
               ),
             ],
@@ -389,7 +404,7 @@ class _CartViewState extends State<CartView> {
                 'Tax (20%)',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: Colors.black,
                 ),
               ),
               Text(
@@ -397,13 +412,16 @@ class _CartViewState extends State<CartView> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
+                    color: Colors.black
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade300),
+          Divider(color: Colors.black),
           const SizedBox(height: 12),
+
+          // Total
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -412,6 +430,7 @@ class _CartViewState extends State<CartView> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black
                 ),
               ),
               Text(
@@ -425,13 +444,15 @@ class _CartViewState extends State<CartView> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // Bouton checkout
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                _isProcessing ? Colors.grey.shade400 : Colors.green,
+                _isProcessing ? Colors.black : Colors.blue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -463,7 +484,7 @@ class _CartViewState extends State<CartView> {
     );
   }
 
-  // ✨ GESTION DU PAIEMENT AVEC MISE À JOUR D'INVENTAIRE
+  // ✨ GESTION DU PAIEMENT
   Future<void> _handlePurchase() async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -512,32 +533,12 @@ class _CartViewState extends State<CartView> {
         if (!mounted) return;
 
         if (valid) {
-          // ✨ ÉTAPE 1 : Mettre à jour l'inventaire
-          print('📦 Updating inventory...');
-          bool inventoryUpdated = await _updateInventory();
-
-          if (!inventoryUpdated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content:
-                Text('❌ Failed to update inventory. Purchase cancelled.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            if (mounted) {
-              setState(() => _isProcessing = false);
-            }
-            return;
-          }
-
-          // ✨ ÉTAPE 2 : Envoyer l'email
           final emailSent = await sendPurchaseEmail(
             email: _emailController.text.trim(),
             items: cart.cartItems,
             total: cart.totalPrice,
           );
 
-          // ✨ ÉTAPE 3 : Sauvegarder l'historique
           final historySaved = await PurchaseHistoryService.savePurchase(
             cartItems: cart.cartItems,
             total: cart.totalPrice,
@@ -618,51 +619,7 @@ class _CartViewState extends State<CartView> {
     }
   }
 
-  // ✨ NOUVELLE MÉTHODE : Mettre à jour l'inventaire
-  Future<bool> _updateInventory() async {
-    try {
-      print('🔄 Decreasing inventory for ${cart.cartItems.length} items...');
-
-      for (var item in cart.cartItems) {
-        final itemId = item['id'];
-        final quantityBought = item['qty'] as int;
-
-        print('📉 Item: ${item['title']}, Qty: $quantityBought');
-
-        try {
-          // Récupérer l'amount actuel
-          final response = await Supabase.instance.client
-              .from('Expenses')
-              .select('amount')
-              .eq('id', itemId)
-              .single();
-
-          final currentAmount = (response['amount'] as num).toDouble();
-          final newAmount = currentAmount - quantityBought;
-
-          print('   Current: $currentAmount, New: $newAmount');
-
-          // Mettre à jour avec le nouvel amount
-          await Supabase.instance.client
-              .from('Expenses')
-              .update({'amount': newAmount})
-              .eq('id', itemId);
-
-          print('   ✅ Updated successfully');
-        } catch (e) {
-          print('   ❌ Error updating item $itemId: $e');
-          rethrow;
-        }
-      }
-
-      print('✅ All inventory updated successfully');
-      return true;
-    } catch (e) {
-      print('❌ Error updating inventory: $e');
-      return false;
-    }
-  }
-
+  // ✨ RÉCUPÈRE LA COULEUR DE LA CATÉGORIE
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'manga':
@@ -672,7 +629,7 @@ class _CartViewState extends State<CartView> {
       case 'eventticket':
         return Colors.green;
       default:
-        return Colors.grey;
+        return Colors.black;
     }
   }
 }
