@@ -12,7 +12,6 @@ class MediaGoogleConnect extends StatefulWidget {
 
 class _MediaGoogleConnectState extends State<MediaGoogleConnect> {
   bool _isLoading = false;
-  String _status = 'Not connected';
   String? _userId;
   String? _email;
 
@@ -26,7 +25,6 @@ class _MediaGoogleConnectState extends State<MediaGoogleConnect> {
     final isLoggedIn = await MediaGoogle.isLoggedIn();
     if (isLoggedIn) {
       setState(() {
-        _status = 'Connected with Google';
         _userId = MediaGoogle.getCurrentUserId();
         _email = MediaGoogle.getCurrentUserEmail();
       });
@@ -36,14 +34,9 @@ class _MediaGoogleConnectState extends State<MediaGoogleConnect> {
   Future<void> _handleGoogleSignUp({bool selectAccount = false}) async {
     setState(() => _isLoading = true);
     try {
-      // optionally clear local session first (not required)
-      // await MediaGoogle.signOutGoogle();
-
       await MediaGoogle.signUpWithGoogle(selectAccount: selectAccount);
-      // Sync user profile after successful login
       await MediaRepository.syncUserProfile();
       await _checkLoginStatus();
-      // Navigate to app after successful login
       if (mounted && _userId != null) {
         Navigator.of(context).pushReplacementNamed('/navBottom');
       }
@@ -63,7 +56,6 @@ class _MediaGoogleConnectState extends State<MediaGoogleConnect> {
     try {
       await MediaGoogle.signOutGoogle();
       setState(() {
-        _status = 'Not connected';
         _userId = null;
         _email = null;
       });
@@ -80,78 +72,121 @@ class _MediaGoogleConnectState extends State<MediaGoogleConnect> {
 
   @override
   Widget build(BuildContext context) {
+    final isConnected = _userId != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Google Connect')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Google Logo
+                Image.network(
+                  'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png',
+                  height: 80,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.account_circle,
+                      size: 100,
+                      color: Colors.grey[300],
+                    );
+                  },
                 ),
-                child: Column(
-                  children: [
+                const SizedBox(height: 40),
+
+                // Connected Status
+                if (isConnected) ...[
+                  Icon(Icons.check_circle,
+                    color: Colors.green[700],
+                    size: 40,
+                  ),
+                  const SizedBox(height: 12),
+                  if (_email != null)
                     Text(
-                      _status,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      _email!,
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 16),
-                    if (_email != null) ...[
-                      Text('Email: $_email'),
-                      const SizedBox(height: 8),
-                    ],
-                    if (_userId != null) ...[
-                      Text('User ID: $_userId'),
-                      const SizedBox(height: 8),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-              if (_userId == null)
-                ElevatedButton(
-                  onPressed: _isLoading ? null : () => _handleGoogleSignUp(selectAccount: true),
-                  child: _isLoading
-                      ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                      : const Text('Connect with Google'),
-                )
-              else
-                Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignOut,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text('Sign Out'),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleGoogleSignUp,
-                      icon: const Icon(Icons.add),
-                      label: _isLoading
-                          ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                          : const Text('Connect with Another Account'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: const Color(0xFF4285F4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text(
+                        'Add Account',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ],
-                )
-            ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _handleSignOut,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : () => _handleGoogleSignUp(selectAccount: true),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: const Color(0xFF4285F4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : const Text(
+                        'Sign in with Google',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
