@@ -4,7 +4,7 @@ import '../../../Models/Akram/media_models.dart';
 
 class MediaAddComment extends StatefulWidget {
   final String mediaItemId;
-  final Function(MediaComment) onCommentAdded;
+  final void Function(MediaComment) onCommentAdded;
 
   const MediaAddComment({super.key, required this.mediaItemId, required this.onCommentAdded});
 
@@ -14,26 +14,32 @@ class MediaAddComment extends StatefulWidget {
 
 class _MediaAddCommentState extends State<MediaAddComment> {
   final _textController = TextEditingController();
-  final _userNameController = TextEditingController();
   double _rating = 0.0;
 
   void _addComment() {
-    if (_userNameController.text.isEmpty || _textController.text.isEmpty || _rating == 0) {
+    if (_textController.text.isEmpty || _rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields and provide a rating'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please provide a rating and write a comment'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    widget.onCommentAdded(MediaComment(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      mediaItemId: widget.mediaItemId,
-      userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      userName: _userNameController.text,
-      date: DateTime.now(),
-      rating: _rating,
-      text: _textController.text,
-    ));
+    // Wrap callback to avoid async assignment issues
+    widget.onCommentAdded(
+      MediaComment(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        mediaItemId: widget.mediaItemId,
+        userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        userName: 'Current User', // Replace with actual user from Supabase if available
+        date: DateTime.now(),
+        rating: _rating,
+        text: _textController.text, mediaTitle: '',
+      ),
+    );
+
     Navigator.pop(context);
   }
 
@@ -44,11 +50,6 @@ class _MediaAddCommentState extends State<MediaAddComment> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: _userNameController,
-            decoration: const InputDecoration(labelText: 'Your Name', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 16),
           const Text('Rating', style: TextStyle(fontWeight: FontWeight.bold)),
           StarRating(
             size: 40,

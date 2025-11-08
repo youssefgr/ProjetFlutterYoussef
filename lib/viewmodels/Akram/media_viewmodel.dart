@@ -219,10 +219,12 @@ class MediaViewModel {
     ]);
   }
 
-  // Load local media items from Supabase
+
+  // Load local media items from Supabase (USER ONLY)
   Future<void> loadMediaItems() async {
     try {
-      _mediaItems = await MediaRepository.loadMediaItems();
+      // Use loadUserMediaItems instead of loadMediaItems to get only current user's media
+      _mediaItems = await MediaRepository.loadUserMediaItems();
       onMediaItemsUpdated?.call();
     } catch (e) {
       print('Error loading media items: $e');

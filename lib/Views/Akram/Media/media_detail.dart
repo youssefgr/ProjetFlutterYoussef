@@ -26,7 +26,16 @@ class _MediaDetailState extends State<MediaDetail> {
   @override
   void initState() {
     super.initState();
-    _commentViewModel.loadCommentsForMedia(widget.mediaItem.id);
+    print('🔍 DEBUG: MediaDetail.initState()');
+    print('🔍 mediaItem.title: ${widget.mediaItem.title}');
+
+    try {
+      _commentViewModel.loadCommentsForMedia(widget.mediaItem.title);
+      print('✅ loadCommentsForMedia called successfully');
+    } catch (e, stackTrace) {
+      print('❌ ERROR in loadCommentsForMedia: $e');
+      print('❌ Stack trace: $stackTrace');
+    }
   }
 
   Color _getThemeColor() {

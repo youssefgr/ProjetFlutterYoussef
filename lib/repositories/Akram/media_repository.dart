@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MediaRepository {
   static const String _tableName = 'Media';
+  static const String _usersTableName = 'Users';
 
   // Load ALL media items from Supabase
   static Future<List<MediaItem>> loadMediaItems() async {
@@ -29,17 +30,96 @@ class MediaRepository {
     }
   }
 
+  // Load media items for current logged-in user
+  static Future<List<MediaItem>> loadUserMediaItems() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        if (kDebugMode) print('⚠️ No user logged in');
+        return [];
+      }
+
+      if (kDebugMode) print('📥 Loading media for user: $userId');
+
+      final response = await Supabase.instance.client
+          .from(_tableName)
+          .select()
+          .eq('userId', userId);
+
+      if (kDebugMode) {
+        print('📥 Loaded ${(response as List).length} user media items');
+      }
+
+      if (response == null) return [];
+
+      final data = response as List<dynamic>;
+      return data.map((item) => _mediaItemFromJson(item)).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error loading user media data: $e');
+      }
+      return [];
+    }
+  }
+
+  // Create/sync user profile on first Google login
+  static Future<void> syncUserProfile() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final userId = user.id;
+      final email = user.email ?? '';
+      final name = user.userMetadata?['full_name'] ?? email.split('@')[0];
+
+      // Check if user already exists
+      final existing = await Supabase.instance.client
+          .from(_usersTableName)
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (existing == null) {
+        // Create new user profile
+        await Supabase.instance.client
+            .from(_usersTableName)
+            .insert({
+          'id': userId,
+          'email': email,
+          'name': name,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        if (kDebugMode) {
+          print('✅ User profile created: $email');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error syncing user profile: $e');
+      }
+    }
+  }
+
   // Add media item to Supabase
   static Future<void> addMediaItem(MediaItem mediaItem) async {
     try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final itemData = _mediaItemToJson(mediaItem);
+      itemData['userId'] = userId;
+
       if (kDebugMode) {
         print('📤 Adding media item: ${mediaItem.title}');
-        print('Data: ${_mediaItemToJson(mediaItem)}');
+        print('Data: $itemData');
       }
 
       final response = await Supabase.instance.client
           .from(_tableName)
-          .insert(_mediaItemToJson(mediaItem))
+          .insert(itemData)
           .select();
 
       if (kDebugMode) {
@@ -60,9 +140,13 @@ class MediaRepository {
           .from(_tableName)
           .update(_mediaItemToJson(mediaItem))
           .eq('id', mediaItem.id);
+
+      if (kDebugMode) {
+        print('✅ Media item updated: ${mediaItem.id}');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Error updating media: $e');
+        print('❌ Error updating media: $e');
       }
       rethrow;
     }
@@ -75,9 +159,13 @@ class MediaRepository {
           .from(_tableName)
           .delete()
           .eq('id', id);
+
+      if (kDebugMode) {
+        print('✅ Media item deleted: $id');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Error deleting media: $e');
+        print('❌ Error deleting media: $e');
       }
       rethrow;
     }
@@ -93,14 +181,13 @@ class MediaRepository {
       'releaseDate': item.releaseDate.toIso8601String(),
       'description': item.description,
       'status': item.status.name,
-      'genre': item.genre.name, // Single genre as string
+      'genre': item.genre.name,
       'userId': item.userId,
     };
   }
 
   // Convert JSON from Supabase to MediaItem
   static MediaItem _mediaItemFromJson(Map<String, dynamic> json) {
-    // Handle both int and String ids
     final id = json['id'];
     final idString = id is int ? id.toString() : id as String;
 
