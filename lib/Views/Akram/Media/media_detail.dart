@@ -167,24 +167,6 @@ class _MediaDetailState extends State<MediaDetail> {
                     style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
                   const SizedBox(height: 24),
-
-                  /*// Additional Information
-                  _buildSectionTitle('Additional Information'),
-                  const SizedBox(height: 12),
-                  _buildDetailRow('Category',
-                      _formatEnumName(widget.mediaItem.category.name),
-                      themeColor
-                  ),
-                  _buildDetailRow('Status',
-                      _formatEnumName(widget.mediaItem.status.name),
-                      themeColor
-                  ),
-                  _buildDetailRow('Genre',
-                      _formatEnumName(widget.mediaItem.genre.name),
-                      themeColor
-                  ),
-                  const SizedBox(height: 24),*/
-
                   // Comments Section
                   MediaCommentDetail(
                     mediaItemId: widget.mediaItem.id,

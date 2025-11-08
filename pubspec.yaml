@@ -40,6 +40,7 @@ dependencies:
   uuid: ^4.0.0
   carousel_slider: ^5.1.1
   flutter_appauth: ^11.0.0
+  fl_chart: ^1.1.1
   #Akram
   #Youssef
   shared_preferences: ^2.2.2  # For local storage

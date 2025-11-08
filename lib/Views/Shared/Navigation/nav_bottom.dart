@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Akram/Media/TopMediaPieChart.dart';
 import '../../Akram/Media/media_home.dart';
 import '../../Akram/Media/media_list.dart';
 import '../../Youssef/Expenses Crud/expenses_list.dart';
@@ -66,13 +67,18 @@ class _NavBottomState extends State<NavBottom> {
         title: const Text("Media Manager App"),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        /*actions: [
+        actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Disconnect',
-            onPressed: _showDisconnectConfirm,
-          ),
-        ],*/
+            icon: const Icon(Icons.pie_chart),
+            tooltip: 'Top Rated Media',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TopMediaPieChart()),
+              );
+            },
+          )
+        ],
       ),
       drawer: Drawer(
         child: Column(

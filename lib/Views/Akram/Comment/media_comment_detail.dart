@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating/flutter_rating.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../Models/Akram/media_models.dart';
 import '../../../viewmodels/Akram/media_comment_viewmodel.dart';
 import 'media_comment_views.dart';
@@ -39,6 +40,11 @@ class _MediaCommentDetailState extends State<MediaCommentDetail> {
   Color _getAvatarColor(String name) {
     final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
     return colors[name.codeUnits.fold(0, (a, b) => a + b) % colors.length];
+  }
+
+  bool _isUserComment(MediaComment comment) {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    return currentUser != null && currentUser.id == comment.userId;
   }
 
   Widget _buildComment(MediaComment comment) => Card(
@@ -81,33 +87,42 @@ class _MediaCommentDetailState extends State<MediaCommentDetail> {
           ]),
           const SizedBox(height: 12),
           Text(comment.text, style: const TextStyle(fontSize: 14, height: 1.4)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, size: 18),
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (_) => MediaEditComment(
-                    comment: comment,
-                    onCommentUpdated: (_) =>
-                        widget.commentViewModel.loadCommentsForMedia(widget.mediaTitle),
+
+          // Edit/Delete buttons - only show for user's own comments
+          if (_isUserComment(comment))
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 18),
+                  tooltip: 'Edit comment',
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => MediaEditComment(
+                      comment: comment,
+                      onCommentUpdated: (updatedComment) async {
+                        await widget.commentViewModel.updateComment(updatedComment);
+                        await _loadComments();
+                      },
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (_) => MediaDeleteComment(
-                    comment: comment,
-                    onCommentDeleted: () =>
-                        widget.commentViewModel.loadCommentsForMedia(widget.mediaTitle),
+                IconButton(
+                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                  tooltip: 'Delete comment',
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => MediaDeleteComment(
+                      comment: comment,
+                      onCommentDeleted: () async {
+                        await widget.commentViewModel.deleteComment(comment.id);
+                        await _loadComments();
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     ),
