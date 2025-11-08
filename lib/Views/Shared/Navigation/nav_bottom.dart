@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../Akram/Media/media_home.dart';
 import '../../Akram/Media/media_list.dart';
+import '../../Youssef/Expenses Crud/expenses_list.dart';
+import '../../Youssef/Subscriptions Crud/subscriptions_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -12,7 +14,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [MediaHome(), MediaList()];
+  final List<Widget> _interfaces = const [MediaHome(), MediaList(), ExpensesList(), SubscriptionsList()];
 
   Future<void> _handleDisconnect() async {
     try {
@@ -143,6 +145,8 @@ class _NavBottomState extends State<NavBottom> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.movie), label: "My Media"),
+          BottomNavigationBarItem(icon: Icon(Icons.money), label: "Expenses"),
+          BottomNavigationBarItem(icon: Icon(Icons.task), label: "Subscriptions"),
         ],
         currentIndex: _currentIndex,
         onTap: (int index) => setState(() => _currentIndex = index),
