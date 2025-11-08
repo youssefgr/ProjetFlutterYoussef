@@ -35,8 +35,8 @@ class _SubscriptionEditState extends State<SubscriptionEdit> {
     _notesController =
         TextEditingController(text: widget.subscription.notes ?? '');
     _selectedCycle = widget.subscription.billingCycle;
-    _startDate = widget.subscription.startDate;
-    _nextBillingDate = widget.subscription.nextBillingDate;
+    _startDate = widget.subscription.startDate!;
+    _nextBillingDate = widget.subscription.nextBillingDate!;
     _isActive = widget.subscription.isActive;
   }
 
@@ -284,7 +284,7 @@ class _SubscriptionEditState extends State<SubscriptionEdit> {
           isActive: _isActive,
         );
 
-        // Mettre à jour dans la base de données
+        // ✨ FIX: updateSubscription now returns bool
         final success =
         await _repository.updateSubscription(updatedSubscription);
 
@@ -322,4 +322,5 @@ class _SubscriptionEditState extends State<SubscriptionEdit> {
       }
     }
   }
+
 }

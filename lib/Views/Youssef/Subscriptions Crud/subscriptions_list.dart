@@ -3,6 +3,8 @@ import 'package:projetflutteryoussef/Models/Youssef/user_subscription.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Subscriptions%20Crud/subscriptions_detail.dart';
 import 'package:projetflutteryoussef/repositories/youssef/subscription_repository.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Subscriptions%20Crud/subscription_add.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class SubscriptionsList extends StatefulWidget {
   const SubscriptionsList({super.key});
 
@@ -12,10 +14,8 @@ class SubscriptionsList extends StatefulWidget {
 
 class _SubscriptionsListState extends State<SubscriptionsList> {
   final SubscriptionRepository _repository = SubscriptionRepository();
-
   List<UserSubscription> _allSubscriptions = [];
   List<UserSubscription> _displayedSubscriptions = [];
-
   bool _isLoading = true;
   String _searchQuery = "";
   bool _isSortAsc = true;
@@ -26,18 +26,30 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
     _loadSubscriptions();
   }
 
+  // ✨ LOAD ONLY CURRENT USER'S SUBSCRIPTIONS
   Future<void> _loadSubscriptions() async {
     try {
       setState(() => _isLoading = true);
 
-      // Récupérer TOUS les subscriptions (sans filtrer par userId)
-      _allSubscriptions = await _repository.getAllSubscriptions();
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        print('⚠️ No user logged in');
+        return;
+      }
+
+      print('👤 Current User: ${currentUser.email}');
+
+      // ✅ Load only current user's subscriptions
+      _allSubscriptions = await _repository.getUserSubscriptions();
+
+      print('📊 Loaded ${_allSubscriptions.length} subscriptions for user');
+
       _applyFilters();
     } catch (e) {
-      print('❌ Erreur lors du chargement: $e');
+      print('❌ Error loading subscriptions: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     } finally {
@@ -48,13 +60,11 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
   }
 
   void _applyFilters() {
-    // Filtrer par recherche
     _displayedSubscriptions = _allSubscriptions.where((sub) {
       final query = _searchQuery.toLowerCase();
       return sub.name.toLowerCase().contains(query);
     }).toList();
 
-    // Trier par coût
     _displayedSubscriptions.sort((a, b) =>
     _isSortAsc ? a.cost.compareTo(b.cost) : b.cost.compareTo(a.cost));
 
@@ -71,12 +81,12 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tous les Abonnements'),
+        title: const Text('My Subscriptions'),
         elevation: 0,
         actions: [
           IconButton(
             icon: Icon(_isSortAsc ? Icons.arrow_downward : Icons.arrow_upward),
-            tooltip: 'Tri par prix',
+            tooltip: 'Sort by price',
             onPressed: () {
               setState(() => _isSortAsc = !_isSortAsc);
               _applyFilters();
@@ -84,7 +94,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Ajouter un abonnement',
+            tooltip: 'Add subscription',
             onPressed: () => _navigateToAdd(),
           ),
         ],
@@ -94,7 +104,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Rechercher...',
+                hintText: 'Search...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -109,7 +119,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: Colors.black,
+                fillColor: Colors.white70,
               ),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
@@ -128,19 +138,19 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
           children: [
             _buildSubscriptionSection(
               BillingCycle.weekly,
-              'Hebdomadaire',
+              'Weekly',
               Colors.red,
             ),
             const SizedBox(height: 16),
             _buildSubscriptionSection(
               BillingCycle.monthly,
-              'Mensuel',
+              'Monthly',
               Colors.blue,
             ),
             const SizedBox(height: 16),
             _buildSubscriptionSection(
               BillingCycle.yearly,
-              'Annuel',
+              'Yearly',
               Colors.green,
             ),
           ],
@@ -148,19 +158,20 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToAdd(),
-        tooltip: 'Ajouter un nouvel abonnement',
+        tooltip: 'Add new subscription',
         child: const Icon(Icons.add),
       ),
     );
   }
 
   Future<void> _navigateToAdd() async {
-    final result = await Navigator.push<UserSubscription?>(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const SubscriptionAdd(),
       ),
     );
+
     if (result != null) {
       _loadSubscriptions();
     }
@@ -178,14 +189,14 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Aucun abonnement trouvé',
+            'No subscriptions found',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
             _searchQuery.isNotEmpty
-                ? 'Aucun résultat pour "$_searchQuery"'
-                : 'Ajoutez un abonnement pour commencer',
+                ? 'No results for "$_searchQuery"'
+                : 'Add a subscription to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey,
             ),
@@ -194,7 +205,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
           ElevatedButton.icon(
             onPressed: () => _navigateToAdd(),
             icon: const Icon(Icons.add),
-            label: const Text('Ajouter un abonnement'),
+            label: const Text('Add subscription'),
           ),
         ],
       ),
@@ -301,7 +312,7 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Pas d\'abonnement $title',
+                  'No $title subscriptions',
                   style: TextStyle(
                     color: color.withOpacity(0.75),
                     fontSize: 14,
@@ -315,7 +326,6 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
     );
   }
 
-  // ✨ NOUVELLE MÉTHODE : Row dynamique et slidable
   Widget _buildSubscriptionRow(
       List<UserSubscription> subscriptions,
       Color color,
@@ -339,7 +349,6 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
     );
   }
 
-  // ✅ MÉTHODE MODIFIÉE AVEC onTap
   Widget _buildSubscriptionCard(UserSubscription sub, Color color) {
     return SizedBox(
       width: 140,
@@ -347,7 +356,6 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: GestureDetector(
-          // 👈 onTap ICI - Navigue vers la page de détail
           onTap: () {
             Navigator.push(
               context,
@@ -355,12 +363,11 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                 builder: (context) => SubscriptionDetail(
                   subscription: sub,
                   onDelete: (id) {
-                    _loadSubscriptions(); // Recharger la liste après suppression
+                    _loadSubscriptions();
                   },
                 ),
               ),
             ).then((_) {
-              // Recharger la liste après retour de la page de détail
               _loadSubscriptions();
             });
           },
@@ -378,9 +385,6 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                         ? DecorationImage(
                       image: NetworkImage(sub.imageUrl),
                       fit: BoxFit.cover,
-                      onError: (exception, stackTrace) {
-                        // Erreur lors du chargement
-                      },
                     )
                         : null,
                   ),
@@ -418,19 +422,6 @@ class _SubscriptionsListState extends State<SubscriptionsList> {
                         fontSize: 13,
                       ),
                     ),
-                    if (sub.notes != null && sub.notes!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          sub.notes!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),

@@ -10,6 +10,7 @@ class UserSubscription {
   final bool isActive;
   final String? notes;
   final bool isCustom;
+  final String? templateId; // ✨ Link to template if from template
 
   UserSubscription({
     required this.id,
@@ -23,24 +24,26 @@ class UserSubscription {
     this.isActive = true,
     this.notes,
     this.isCustom = false,
+    this.templateId,
   });
 
   factory UserSubscription.fromJson(Map<String, dynamic> json) {
     return UserSubscription(
-      id: json['id'],
-      userId: json['user_id'],
-      name: json['name'],
-      imageUrl: json['image_url'],
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      name: json['name'] as String,
+      imageUrl: json['image_url'] as String? ?? '',
       cost: (json['cost'] as num).toDouble(),
       billingCycle: BillingCycle.values.firstWhere(
             (e) => e.name == json['billing_cycle'],
         orElse: () => BillingCycle.monthly,
       ),
-      startDate: DateTime.parse(json['start_date']),
-      nextBillingDate: DateTime.parse(json['next_billing_date']),
-      isActive: json['is_active'] ?? true,
-      notes: json['notes'],
-      isCustom: json['is_custom'] ?? false,
+      startDate: DateTime.parse(json['start_date'] as String),
+      nextBillingDate: DateTime.parse(json['next_billing_date'] as String),
+      isActive: json['is_active'] as bool? ?? true,
+      notes: json['notes'] as String?,
+      isCustom: json['is_custom'] as bool? ?? false,
+      templateId: json['template_id'] as String?, // ✨ ADD
     );
   }
 
@@ -57,6 +60,7 @@ class UserSubscription {
       'is_active': isActive,
       'notes': notes,
       'is_custom': isCustom,
+      'template_id': templateId, // ✨ ADD
     };
   }
 
@@ -72,6 +76,7 @@ class UserSubscription {
     bool? isActive,
     String? notes,
     bool? isCustom,
+    String? templateId,
   }) {
     return UserSubscription(
       id: id ?? this.id,
@@ -85,6 +90,7 @@ class UserSubscription {
       isActive: isActive ?? this.isActive,
       notes: notes ?? this.notes,
       isCustom: isCustom ?? this.isCustom,
+      templateId: templateId ?? this.templateId,
     );
   }
 }

@@ -24,19 +24,28 @@ class _SubscriptionDetailState extends State<SubscriptionDetail> {
   final SubscriptionRepository _repository = SubscriptionRepository();
   bool _isDeleting = false;
 
-  // Calculer les jours avant le prochain paiement
+  // ✨ HANDLE NULLABLE nextBillingDate
   int get daysUntilNextPayment {
+    if (widget.subscription.nextBillingDate == null) {
+      return 0;
+    }
     final now = DateTime.now();
-    return widget.subscription.nextBillingDate.difference(now).inDays;
+    return widget.subscription.nextBillingDate!.difference(now).inDays;
   }
 
   // Formater la date
-  String _formatDate(DateTime date) {
+  String _formatDate(DateTime? date) {
+    if (date == null) {
+      return 'Not set';
+    }
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
   // Formater le temps
-  String _formatTime(DateTime date) {
+  String _formatTime(DateTime? date) {
+    if (date == null) {
+      return 'Not set';
+    }
     return DateFormat('HH:mm').format(date);
   }
 
@@ -68,7 +77,6 @@ class _SubscriptionDetailState extends State<SubscriptionDetail> {
                   });
                 },
               ),
-
               IconButton(
                 icon: _isDeleting
                     ? const SizedBox(
@@ -240,31 +248,36 @@ class _SubscriptionDetailState extends State<SubscriptionDetail> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        _buildInfoCard(
-          icon: Icons.calendar_today,
-          label: 'Start Date',
-          value: _formatDate(widget.subscription.startDate),
-          color: Colors.green,
-        ),
-        const SizedBox(height: 12),
-        _buildInfoCard(
-          icon: Icons.event_note,
-          label: 'Next Billing Date',
-          value: _formatDate(widget.subscription.nextBillingDate),
-          color: Colors.orange,
-        ),
-        const SizedBox(height: 12),
-        _buildInfoCard(
-          icon: Icons.schedule,
-          label: 'Days Until Next Payment',
-          value: '${daysUntilNextPayment} days',
-          color: daysUntilNextPayment < 7 ? Colors.red : Colors.blue,
-        ),
+        // ✨ ONLY SHOW IF startDate IS NOT NULL
+        if (widget.subscription.startDate != null) ...[
+          _buildInfoCard(
+            icon: Icons.calendar_today,
+            label: 'Start Date',
+            value: _formatDate(widget.subscription.startDate),
+            color: Colors.green,
+          ),
+          const SizedBox(height: 12),
+        ],
+        // ✨ ONLY SHOW IF nextBillingDate IS NOT NULL
+        if (widget.subscription.nextBillingDate != null) ...[
+          _buildInfoCard(
+            icon: Icons.event_note,
+            label: 'Next Billing Date',
+            value: _formatDate(widget.subscription.nextBillingDate),
+            color: Colors.orange,
+          ),
+          const SizedBox(height: 12),
+          _buildInfoCard(
+            icon: Icons.schedule,
+            label: 'Days Until Next Payment',
+            value: '${daysUntilNextPayment} days',
+            color: daysUntilNextPayment < 7 ? Colors.red : Colors.blue,
+          ),
+        ],
       ],
     );
   }
 
-  // ✅ MÉTHODE MODIFIÉE - SANS LES IDS
   Widget _buildDetailsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +378,6 @@ class _SubscriptionDetailState extends State<SubscriptionDetail> {
             IconButton(
               icon: const Icon(Icons.content_copy, size: 18),
               onPressed: () {
-                // Copier dans le presse-papiers
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Copied: $value'),

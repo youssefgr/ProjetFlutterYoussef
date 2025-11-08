@@ -1,53 +1,99 @@
 import 'dart:io';
-
-import 'package:projetflutteryoussef/Models/Youssef/subscription_template.dart';
-import 'package:projetflutteryoussef/Models/Youssef/user_subscription.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:projetflutteryoussef/Models/Youssef/user_subscription.dart';
+import 'package:projetflutteryoussef/Models/Youssef/subscription_template.dart';
 
 class SubscriptionRepository {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  static const String _subscriptionsTable = 'user_subscriptions'; // ✨ User subscriptions
+  static const String _templatesTable = 'subscription_templates'; // ✨ Static templates
+  static const String _bucketName = 'subscriptions';
 
-  // Récupérer tous les templates
+  // ✨ 1. LOAD TEMPLATES (SHARED)
   Future<List<SubscriptionTemplate>> getTemplates() async {
     try {
-      final response = await _supabase
-          .from('subscription_templates')
-          .select()
-          .order('name');
+      print('📥 Loading templates...');
 
-      return (response as List)
+      final response = await Supabase.instance.client
+          .from(_templatesTable)
+          .select();
+
+      if (response == null) return [];
+
+      final templates = (response as List)
           .map((json) => SubscriptionTemplate.fromJson(json))
           .toList();
+
+      print('✅ Loaded ${templates.length} templates');
+      return templates;
     } catch (e) {
       print('❌ Error loading templates: $e');
       return [];
     }
   }
 
-  // Récupérer les subscriptions de l'utilisateur
-  Future<List<UserSubscription>> getUserSubscriptions(String userId) async {
+  // ✨ 2. LOAD USER SUBSCRIPTIONS (PRIVATE)
+  Future<List<UserSubscription>> getUserSubscriptions() async {
     try {
-      final response = await _supabase
-          .from('user_subscriptions')
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        print('⚠️ No user logged in');
+        return [];
+      }
+
+      print('📥 Loading subscriptions for user: $userId');
+
+      final response = await Supabase.instance.client
+          .from(_subscriptionsTable)
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((json) => UserSubscription.fromJson(json))
-          .toList();
+      final subscriptions = (response as List?)
+          ?.map((json) => UserSubscription.fromJson(json))
+          .toList() ??
+          [];
+
+      print('✅ Loaded ${subscriptions.length} user subscriptions');
+      return subscriptions;
     } catch (e) {
-      print('❌ Error loading user subscriptions: $e');
+      print('❌ Error loading subscriptions: $e');
       return [];
     }
   }
 
-  // Ajouter une subscription
-  Future<bool> addSubscription(UserSubscription subscription) async {
+  // ✨ 3. ADD SUBSCRIPTION (FROM TEMPLATE)
+  Future<bool> addSubscriptionFromTemplate(
+      SubscriptionTemplate template,
+      double cost,
+      BillingCycle billingCycle,
+      DateTime startDate,
+      String? notes,
+      ) async {
     try {
-      await _supabase.from('user_subscriptions').insert(subscription.toJson());
-      print('✅ Subscription added successfully');
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      final nextBillingDate = billingCycle.calculateNextBillingDate(startDate);
+
+      final subscription = UserSubscription(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: userId,
+        name: template.name, // ✨ FROM TEMPLATE
+        imageUrl: template.imageUrl, // ✨ FROM TEMPLATE
+        cost: cost, // ✨ USER ENTERS
+        billingCycle: billingCycle, // ✨ USER SELECTS
+        startDate: startDate, // ✨ USER SELECTS
+        nextBillingDate: nextBillingDate,
+        notes: notes,
+        isCustom: false, // ✨ NOT CUSTOM
+        templateId: template.id, // ✨ LINK TO TEMPLATE
+      );
+
+      await Supabase.instance.client
+          .from(_subscriptionsTable)
+          .insert(subscription.toJson());
+
+      print('✅ Added subscription from template');
       return true;
     } catch (e) {
       print('❌ Error adding subscription: $e');
@@ -55,14 +101,60 @@ class SubscriptionRepository {
     }
   }
 
-  // Mettre à jour une subscription
+  // ✨ 4. ADD CUSTOM SUBSCRIPTION
+  Future<bool> addCustomSubscription(
+      String name,
+      String imageUrl,
+      double cost,
+      BillingCycle billingCycle,
+      DateTime startDate,
+      String? notes,
+      ) async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      final nextBillingDate = billingCycle.calculateNextBillingDate(startDate);
+
+      final subscription = UserSubscription(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: userId,
+        name: name, // ✨ USER ENTERS
+        imageUrl: imageUrl, // ✨ USER UPLOADS
+        cost: cost, // ✨ USER ENTERS
+        billingCycle: billingCycle, // ✨ USER SELECTS
+        startDate: startDate, // ✨ USER SELECTS
+        nextBillingDate: nextBillingDate,
+        notes: notes,
+        isCustom: true, // ✨ CUSTOM
+        templateId: null, // ✨ NO TEMPLATE
+      );
+
+      await Supabase.instance.client
+          .from(_subscriptionsTable)
+          .insert(subscription.toJson());
+
+      print('✅ Added custom subscription');
+      return true;
+    } catch (e) {
+      print('❌ Error adding custom subscription: $e');
+      return false;
+    }
+  }
+
+  // ✨ 5. UPDATE SUBSCRIPTION
   Future<bool> updateSubscription(UserSubscription subscription) async {
     try {
-      await _supabase
-          .from('user_subscriptions')
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      await Supabase.instance.client
+          .from(_subscriptionsTable)
           .update(subscription.toJson())
-          .eq('id', subscription.id);
-      print('✅ Subscription updated successfully');
+          .eq('id', subscription.id)
+          .eq('user_id', userId);
+
+      print('✅ Updated subscription');
       return true;
     } catch (e) {
       print('❌ Error updating subscription: $e');
@@ -70,11 +162,19 @@ class SubscriptionRepository {
     }
   }
 
-  // Supprimer une subscription
-  Future<bool> deleteSubscription(String id) async {
+  // ✨ 6. DELETE SUBSCRIPTION
+  Future<bool> deleteSubscription(String subscriptionId) async {
     try {
-      await _supabase.from('user_subscriptions').delete().eq('id', id);
-      print('✅ Subscription deleted successfully');
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      await Supabase.instance.client
+          .from(_subscriptionsTable)
+          .delete()
+          .eq('id', subscriptionId)
+          .eq('user_id', userId);
+
+      print('✅ Deleted subscription');
       return true;
     } catch (e) {
       print('❌ Error deleting subscription: $e');
@@ -82,44 +182,29 @@ class SubscriptionRepository {
     }
   }
 
-  // Uploader une image custom vers Supabase Storage
-  Future<String?> uploadCustomImage(String filePath, String fileName) async {
+  // ✨ 7. UPLOAD CUSTOM IMAGE
+  Future<String?> uploadCustomImage(String imagePath) async {
     try {
-      final file = File(filePath);
-      final bytes = await file.readAsBytes();
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
 
-      final path = 'subscription_images/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final file = File(imagePath);
+      final fileName =
+          'custom/${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      await _supabase.storage
-          .from('subscriptions')
-          .uploadBinary(path, bytes);
+      await Supabase.instance.client.storage
+          .from(_bucketName)
+          .upload(fileName, file);
 
-      final url = _supabase.storage
-          .from('subscriptions')
-          .getPublicUrl(path);
+      final publicUrl = Supabase.instance.client.storage
+          .from(_bucketName)
+          .getPublicUrl(fileName);
 
-      print('✅ Image uploaded: $url');
-      return url;
+      print('✅ Image uploaded: $publicUrl');
+      return publicUrl;
     } catch (e) {
       print('❌ Error uploading image: $e');
       return null;
     }
   }
-  // Dans subscription_repository.dart
-  Future<List<UserSubscription>> getAllSubscriptions() async {
-    try {
-      final response = await _supabase
-          .from('user_subscriptions')
-          .select()
-          .order('created_at', ascending: false);
-
-      return (response as List)
-          .map((json) => UserSubscription.fromJson(json))
-          .toList();
-    } catch (e) {
-      print('❌ Erreur lors du chargement de tous les abonnements: $e');
-      return [];
-    }
-  }
-
 }
