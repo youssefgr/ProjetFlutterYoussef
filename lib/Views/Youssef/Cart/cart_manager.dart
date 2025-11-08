@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 class CartManager extends ChangeNotifier {
   List<Map<String, dynamic>> cartItems = [];
@@ -100,130 +101,47 @@ class CartManager extends ChangeNotifier {
     return item != null ? (item['qty'] as num).toInt() : 0;
   }
 
-  // ✨ SHOW CAPTCHA DIALOG - REAL IMPLEMENTATION
+  // ✨ SHOW CAPTCHA DIALOG - WITH INAPPWEBVIEW (ORIGINAL WORKING VERSION)
   Future<String?> showCaptchaDialog(BuildContext context) async {
-    print('🔐 Showing CAPTCHA dialog...');
+    String? token;
+    bool dialogDismissed = false;
 
-    return showDialog<String>(
+    await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
-        bool agreedToTerms = false;
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('🔐 Verify you\'re human'),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        border: Border.all(color: Colors.blue, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.verified_user, color: Colors.blue, size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'I\'m not a robot',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            '✅ Verification Status',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Your browser has passed security checks.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: agreedToTerms,
-                          onChanged: (value) {
-                            setState(() => agreedToTerms = value ?? false);
-                          },
-                        ),
-                        Expanded(
-                          child: Text(
-                            'I agree to proceed with this purchase',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, null),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: agreedToTerms ? Colors.blue : Colors.grey,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.verified),
-                  label: const Text('Verify'),
-                  onPressed: agreedToTerms
-                      ? () {
-                    print('✅ CAPTCHA verified!');
-                    Navigator.pop(dialogContext, 'verified_token_${DateTime.now().millisecondsSinceEpoch}');
-                  }
-                      : null,
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('🔐 Security Verification'),
+        contentPadding: const EdgeInsets.all(16),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: _ReCaptchaV2WebView(
+            onTokenReceived: (receivedToken) {
+              if (!dialogDismissed) {
+                dialogDismissed = true;
+                token = receivedToken;
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop();
+                }
+              }
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (!dialogDismissed) {
+                dialogDismissed = true;
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
+
+    return token;
   }
 
   // ✨ PRINT CART SUMMARY
@@ -240,3 +158,93 @@ class CartManager extends ChangeNotifier {
     print('');
   }
 }
+
+// ✨ PRIVATE WEBVIEW WIDGET FOR RECAPTCHA V2 (ORIGINAL WORKING VERSION)
+class _ReCaptchaV2WebView extends StatefulWidget {
+  final void Function(String token) onTokenReceived;
+
+  const _ReCaptchaV2WebView({
+    required this.onTokenReceived,
+  });
+
+  @override
+  State<_ReCaptchaV2WebView> createState() => _ReCaptchaV2WebViewState();
+}
+
+class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
+  bool _isLoading = true;
+  bool _tokenReceived = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: WebUri(
+                'https://youssefgr.github.io/recaptchayoussef/recaptcha.html'),
+          ),
+          initialSettings: InAppWebViewSettings(
+            javaScriptEnabled: true,
+            javaScriptCanOpenWindowsAutomatically: true,
+            useHybridComposition: true,
+            supportZoom: false,
+            builtInZoomControls: false,
+          ),
+          onWebViewCreated: (controller) {
+            controller.addJavaScriptHandler(
+              handlerName: 'onTokenReceived',
+              callback: (args) {
+                if (_tokenReceived || !mounted) return;
+
+                if (args.isNotEmpty) {
+                  _tokenReceived = true;
+                  String token = args[0].toString();
+                  print(
+                      '✅ Received reCAPTCHA v2 token: ${token.substring(0, min(token.length, 30))}...');
+                  widget.onTokenReceived(token);
+                }
+              },
+            );
+          },
+          onLoadStart: (controller, url) {
+            if (mounted) {
+              setState(() => _isLoading = true);
+            }
+          },
+          onLoadStop: (controller, url) {
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
+            controller.evaluateJavascript(source: """
+              window.dispatchEvent(new Event('flutterInAppWebViewPlatformReady'));
+            """);
+          },
+          onConsoleMessage: (controller, consoleMessage) {
+            if (!consoleMessage.message
+                .contains('Uncaught (in promise) null')) {
+              print('WebView: ${consoleMessage.message}');
+            }
+          },
+        ),
+        if (_isLoading)
+          Container(
+            color: Colors.white,
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading verification...'),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ✨ HELPER FUNCTION
+int min(int a, int b) => a < b ? a : b;
