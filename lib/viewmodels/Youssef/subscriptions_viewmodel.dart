@@ -1,6 +1,6 @@
 import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/subscription_you.dart';
-import 'package:projetflutteryoussef/repositories/subscriptions_repository.dart';
+import 'package:projetflutteryoussef/repositories/youssef/subscriptions_repository.dart';
 
 class SubscriptionsViewModel {
   List<Subscription> _subscriptionsList = [];

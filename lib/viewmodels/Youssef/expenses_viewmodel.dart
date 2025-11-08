@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_models_you.dart';
-import 'package:projetflutteryoussef/repositories/expenses_repository.dart';
+import 'package:projetflutteryoussef/repositories/youssef/expenses_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpensesViewModel {
