@@ -1,19 +1,37 @@
-import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class CartManager {
-  static final CartManager _instance = CartManager._internal();
-
-  factory CartManager() => _instance;
-
-  CartManager._internal();
-
+class CartManager extends ChangeNotifier {
   final List<Map<String, dynamic>> cartItems = [];
+  String? _currentUserId;
 
-  void addToCart(Expenses expense, int qty) {
+  CartManager() {
+    _initAuthListener();
+  }
+
+  // ✨ LISTEN TO AUTH CHANGES
+  void _initAuthListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+
+      if (event == AuthChangeEvent.signedOut) {
+        // ✨ USER LOGGED OUT - CLEAR CART
+        clearCart();
+        _currentUserId = null;
+        print('🗑️ Cart cleared on logout');
+      } else if (event == AuthChangeEvent.signedIn) {
+        // ✨ USER LOGGED IN - SET USER ID
+        _currentUserId = Supabase.instance.client.auth.currentUser?.id;
+        print('✅ New user logged in: $_currentUserId');
+      }
+    });
+  }
+
+  // ✨ ADD WITH STRING PARAMETERS
+  void addToCart(String id, String title, double price, String category, {int qty = 1}) {
     final existing = cartItems.firstWhere(
-          (item) => item['id'] == expense.id,
+          (item) => item['id'] == id,
       orElse: () => {},
     );
 
@@ -21,21 +39,28 @@ class CartManager {
       existing['qty'] += qty;
     } else {
       cartItems.add({
-        'id': expense.id,
-        'title': expense.title,
+        'id': id,
+        'title': title,
         'qty': qty,
-        'price': expense.price,
-        'category': expense.category.name,
+        'price': price,
+        'category': category,
       });
     }
+
+    print('✅ Added to cart: $title');
+    notifyListeners();
   }
 
   void removeItem(String id) {
     cartItems.removeWhere((item) => item['id'] == id);
+    print('🗑️ Removed from cart');
+    notifyListeners();
   }
 
   void clearCart() {
     cartItems.clear();
+    print('🗑️ Cart cleared');
+    notifyListeners();
   }
 
   double get totalPrice => cartItems.fold(
@@ -44,10 +69,9 @@ class CartManager {
   );
 
   bool get hasItems => cartItems.isNotEmpty;
-
   int get itemCount => cartItems.length;
 
-  // Show reCAPTCHA v2 dialog
+  // ✨ CAPTCHA DIALOG
   Future<String?> showCaptchaDialog(BuildContext context) async {
     String? token;
     bool dialogDismissed = false;
@@ -91,7 +115,7 @@ class CartManager {
   }
 }
 
-// Private WebView widget for reCAPTCHA v2
+// ✨ CAPTCHA WEBVIEW
 class _ReCaptchaV2WebView extends StatefulWidget {
   final void Function(String token) onTokenReceived;
 
@@ -113,8 +137,7 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
       children: [
         InAppWebView(
           initialUrlRequest: URLRequest(
-            url: WebUri(
-                'https://youssefgr.github.io/recaptchayoussef/recaptcha.html'),
+            url: WebUri('https://youssefgr.github.io/recaptchayoussef/recaptcha.html'),
           ),
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
@@ -128,12 +151,10 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
               handlerName: 'onTokenReceived',
               callback: (args) {
                 if (_tokenReceived || !mounted) return;
-
                 if (args.isNotEmpty) {
                   _tokenReceived = true;
                   String token = args[0].toString();
-                  print(
-                      '✅ Received reCAPTCHA v2 token: ${token.substring(0, 30)}...');
+                  print('✅ Received reCAPTCHA v2 token: ${token.substring(0, 30)}...');
                   widget.onTokenReceived(token);
                 }
               },
@@ -148,13 +169,12 @@ class _ReCaptchaV2WebViewState extends State<_ReCaptchaV2WebView> {
             if (mounted) {
               setState(() => _isLoading = false);
             }
-            controller.evaluateJavascript(source: """
-              window.dispatchEvent(new Event('flutterInAppWebViewPlatformReady'));
-            """);
+            controller.evaluateJavascript(
+              source: "window.dispatchEvent(new Event('flutterInAppWebViewPlatformReady'));",
+            );
           },
           onConsoleMessage: (controller, consoleMessage) {
-            if (!consoleMessage.message
-                .contains('Uncaught (in promise) null')) {
+            if (!consoleMessage.message.contains('Uncaught (in promise) null')) {
               print('WebView: ${consoleMessage.message}');
             }
           },

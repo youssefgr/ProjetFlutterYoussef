@@ -18,11 +18,16 @@ class PdfGeneratorService {
       final currency = '€';
 
       // Calculate statistics
-      final totalSpent = purchases.fold(0.0, (sum, p) => sum + p.total);
-      final totalItems = purchases.fold(
-        0,
-            (sum, p) => sum + p.items.fold(0, (s, item) => s + item.quantity),
+      final totalSpent = purchases.fold<double>(
+        0.0,
+            (sum, p) => sum + (p?.total ?? 0.0),
       );
+
+      final totalItems = purchases.fold<int>(
+        0,
+            (sum, p) => sum + (p?.items?.fold<int>(0, (s, item) => s + item.quantity) ?? 0),
+      );
+
 
       pdf.addPage(
         pw.MultiPage(
@@ -181,7 +186,7 @@ class PdfGeneratorService {
                               ],
                             ),
                             // Items
-                            ...purchase.items.map((item) {
+                            ...(purchase?.items ?? []).map((item) {
                               return pw.TableRow(
                                 children: [
                                   _buildTableCell(item.title),

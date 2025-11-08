@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gcaptcha_v3/recaptca_config.dart';
 import 'package:projetflutteryoussef/Views/Shared/Navigation/nav_bottom.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 import 'Views/Akram/media_google_connect.dart';
+import 'Views/Youssef/Cart/cart_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => CartManager()),
+
+        ],
+        child: MaterialApp(
       title: "Media Manager App",
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
@@ -49,7 +56,7 @@ class MyApp extends StatelessWidget {
       routes: {
         "/navBottom": (context) => const NavBottom(),
       },
-    );
+    ));
   }
 }
 

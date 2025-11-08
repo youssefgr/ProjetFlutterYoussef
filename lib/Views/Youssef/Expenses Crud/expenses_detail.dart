@@ -4,6 +4,7 @@ import 'package:projetflutteryoussef/Models/Youssef/expenses_enum_you.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_manager.dart';
 import 'package:projetflutteryoussef/Models/Youssef/expenses_you.dart';
 import 'package:projetflutteryoussef/utils/image_utils.dart';
+import 'package:provider/provider.dart';
 import 'expenses_delete.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Expenses%20Crud/expenses_edit.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/cart_view.dart';
@@ -92,16 +93,12 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✨ IMAGE AMÉLIORÉE DEPUIS SUPABASE
             _buildExpenseImage(),
-
-            // ✨ INFOS PRINCIPALES
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Titre principal
                   Text(
                     _currentExpense.title,
                     style: const TextStyle(
@@ -111,21 +108,15 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // Catégorie avec couleur
                   _buildCategoryBadge(),
                   const SizedBox(height: 24),
-
-                  // ✨ SECTION INFOS EN CARTES
                   _buildInfoCard(
                     icon: Icons.calendar_today,
                     label: 'Date',
-                    value:
-                    '${_currentExpense.date.day}/${_currentExpense.date.month}/${_currentExpense.date.year}',
+                    value: '${_currentExpense.date.day}/${_currentExpense.date.month}/${_currentExpense.date.year}',
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 12),
-
                   _buildInfoCard(
                     icon: Icons.shopping_bag,
                     label: 'Quantité',
@@ -133,7 +124,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     color: Colors.orange,
                   ),
                   const SizedBox(height: 12),
-
                   _buildInfoCard(
                     icon: Icons.euro,
                     label: 'Prix',
@@ -141,7 +131,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     color: Colors.green,
                   ),
                   const SizedBox(height: 12),
-
                   _buildInfoCard(
                     icon: Icons.person,
                     label: 'Utilisateur',
@@ -149,8 +138,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     color: Colors.purple,
                   ),
                   const SizedBox(height: 24),
-
-                  // ✨ BOUTON AJOUTER AU PANIER
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -182,7 +169,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     );
   }
 
-  // ✨ IMAGE DEPUIS SUPABASE
   Widget _buildExpenseImage() {
     if (_currentExpense.imageURL.isEmpty) {
       return Container(
@@ -274,7 +260,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
             ),
           ),
         ),
-        // Badge de catégorie sur l'image
         Positioned(
           top: 16,
           right: 16,
@@ -308,7 +293,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     );
   }
 
-  // ✨ BADGE CATÉGORIE
   Widget _buildCategoryBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -331,7 +315,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     );
   }
 
-  // ✨ CARTES D'INFO AMÉLIORÉES
   Widget _buildInfoCard({
     required IconData icon,
     required String label,
@@ -392,7 +375,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     );
   }
 
-  // ✨ RÉCUPÈRE LA COULEUR DE LA CATÉGORIE
   Color _getCategoryColor() {
     switch (_currentExpense.category) {
       case ExpensesCategory.Manga:
@@ -404,11 +386,9 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     }
   }
 
-  // ✨ DIALOG AJOUTER AU PANIER AMÉLIORÉ
+  // ✨ FIXED DIALOG - USE PROVIDER
   void _showAddToCartDialog(BuildContext context) {
-    final TextEditingController qtyController =
-    TextEditingController(text: "1");
-    final cart = CartManager();
+    final TextEditingController qtyController = TextEditingController(text: "1");
 
     showDialog(
       context: context,
@@ -446,8 +426,7 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  hintText:
-                  'Max: ${_currentExpense.amount.toInt()} available',
+                  hintText: 'Max: ${_currentExpense.amount.toInt()} available',
                   prefixIcon: const Icon(Icons.shopping_bag),
                 ),
               ),
@@ -505,7 +484,19 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                   return;
                 }
 
-                cart.addToCart(_currentExpense, qty);
+                // ✨ GET CART FROM PROVIDER (SAME INSTANCE)
+                final cart = Provider.of<CartManager>(context, listen: false);
+
+                // ✨ ADD ITEMS WITH QUANTITY
+                for (int i = 0; i < qty; i++) {
+                  cart.addToCart(
+                    _currentExpense.id,
+                    _currentExpense.title,
+                    _currentExpense.price,
+                    _currentExpense.category.name,
+                  );
+                }
+
                 Navigator.pop(dialogContext);
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -529,6 +520,7 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     ),
                   ),
                 );
+                qtyController.dispose();
               },
             ),
           ],

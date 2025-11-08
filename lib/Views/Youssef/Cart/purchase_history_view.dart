@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:projetflutteryoussef/Models/Youssef/purchase_history.dart';
 import 'package:projetflutteryoussef/utils/purchase_history_service.dart';
 import 'package:projetflutteryoussef/utils/pdf_generator_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PurchaseHistoryView extends StatefulWidget {
   const PurchaseHistoryView({super.key});
@@ -15,6 +16,7 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
   List<PurchaseRecord> _purchases = [];
   bool _isLoading = true;
   bool _isGeneratingPdf = false;
+  double _totalSpending = 0.0;
 
   @override
   void initState() {
@@ -23,13 +25,87 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
   }
 
   Future<void> _loadPurchases() async {
-    setState(() => _isLoading = true);
-    final purchases = await PurchaseHistoryService.getAllPurchases();
-    setState(() {
-      _purchases = purchases;
-      _isLoading = false;
-    });
+    try {
+      setState(() => _isLoading = true);
+
+      // ✨ GET CURRENT USER ID FROM SUPABASE
+      final supabaseUser = Supabase.instance.client.auth.currentUser;
+      final String userId = supabaseUser?.id ?? 'anonymous';
+
+      print('📋 Loading purchases for user: $userId');
+
+      // ✨ GET PURCHASES FROM NEW TABLE STRUCTURE
+      final purchases = await PurchaseHistoryService.getPurchasesForUser(userId);
+
+      print('📋 Received ${purchases.length} purchases from Supabase');
+
+      // ✨ GROUP ITEMS BY PURCHASE ID (since table now has one row per item)
+      Map<String, Map<String, dynamic>> purchaseMap = {};
+
+      for (var purchase in purchases) {
+        String purchaseId = (purchase['id'] as String).split('-').take(1).join('-');
+
+        if (!purchaseMap.containsKey(purchaseId)) {
+          purchaseMap[purchaseId] = {
+            'id': purchaseId,
+            'purchase_date': purchase['purchase_date'],
+            'email': purchase['email'],
+            'items': [],
+            'total': 0.0,
+          };
+        }
+
+        // ✨ FIX: Handle null values safely
+        double itemTotal = 0.0;
+        if (purchase['total'] != null) {
+          itemTotal = (purchase['total'] as num).toDouble();
+        }
+
+        purchaseMap[purchaseId]!['items'].add({
+          'id': purchase['id'],
+          'title': purchase['item_name'] ?? 'Unknown',
+          'category': purchase['category'] ?? 'Unknown',
+          'quantity': purchase['quantity'] ?? 1,
+          'price': (purchase['price'] as num?)?.toDouble() ?? 0.0,
+        });
+
+        double currentTotal = (purchaseMap[purchaseId]!['total'] as num).toDouble();
+        purchaseMap[purchaseId]!['total'] = currentTotal + itemTotal;
+      }
+
+      // ✨ CONVERT TO PURCHASERECORD
+      final purchaseRecords = purchaseMap.values.map((p) {
+        List<PurchaseItem> items = [];
+        for (var item in (p['items'] as List)) {
+          items.add(PurchaseItem.fromJson(item));
+        }
+
+        return PurchaseRecord(
+          id: p['id'] as String,
+          date: DateTime.parse(p['purchase_date'] as String),
+          items: items,
+          total: p['total'] as double,
+          email: p['email'] as String,
+          userId: userId,
+        );
+      }).toList();
+
+      // ✨ SORT BY DATE (newest first)
+      purchaseRecords.sort((a, b) => b.date.compareTo(a.date));
+
+      setState(() {
+        _purchases = purchaseRecords;
+        _totalSpending = purchaseRecords.fold(0.0, (sum, p) => sum + p.total);
+        _isLoading = false;
+      });
+
+      print('✅ Loaded ${_purchases.length} grouped purchases');
+    } catch (e) {
+      print('❌ Error loading purchases: $e');
+      setState(() => _isLoading = false);
+    }
   }
+
 
   Future<void> _generatePDF() async {
     if (_purchases.isEmpty) {
@@ -81,13 +157,13 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
             IconButton(
               icon: _isGeneratingPdf
                   ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
                   : const Icon(Icons.picture_as_pdf),
               tooltip: 'Generate PDF',
               onPressed: _isGeneratingPdf ? null : _generatePDF,
@@ -98,52 +174,55 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
           ? const Center(child: CircularProgressIndicator())
           : _purchases.isEmpty
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No purchases yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your purchase history will appear here',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                _buildStatistics(),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadPurchases,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _purchases.length,
-                      itemBuilder: (context, index) {
-                        return _buildPurchaseCard(_purchases[index]);
-                      },
-                    ),
-                  ),
-                ),
-              ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.shopping_bag_outlined,
+              size: 80,
+              color: Colors.grey[400],
             ),
+            const SizedBox(height: 16),
+            Text(
+              'No purchases yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your purchase history will appear here',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      )
+          : Column(
+        children: [
+          _buildStatistics(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadPurchases,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _purchases.length,
+                itemBuilder: (context, index) {
+                  return _buildPurchaseCard(_purchases[index]);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildStatistics() {
-    final totalSpent = _purchases.fold(0.0, (sum, p) => sum + p.total);
-    final totalItems = _purchases.fold(
+    final totalSpent = _purchases.fold<double>(
+      0.0,
+          (sum, p) => sum + (p.total ?? 0.0),
+    );
+    final totalItems = _purchases.fold<int>(
       0,
-      (sum, p) => sum + p.items.fold(0, (s, item) => s + item.quantity),
+          (sum, p) => sum + (p.items?.fold<int>(0, (s, item) => s + item.quantity) ?? 0),
     );
 
     return Container(
@@ -195,7 +274,9 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
     );
   }
 
-  Widget _buildPurchaseCard(PurchaseRecord purchase) {
+  Widget _buildPurchaseCard(PurchaseRecord? purchase) {
+    if (purchase == null) return const SizedBox.shrink();
+
     final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
 
     return Card(
@@ -205,7 +286,6 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -256,7 +336,7 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Text(
-                      '${purchase.total.toStringAsFixed(2)} €',
+                      '${(purchase.total ?? 0.0).toStringAsFixed(2)} €',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -268,8 +348,6 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
               ],
             ),
           ),
-
-          // Items
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -280,7 +358,7 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 8),
-                ...purchase.items.map((item) {
+                ...(purchase.items ?? []).map((item) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
@@ -335,8 +413,6 @@ class _PurchaseHistoryViewState extends State<PurchaseHistoryView> {
               ],
             ),
           ),
-
-          // Email info
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(

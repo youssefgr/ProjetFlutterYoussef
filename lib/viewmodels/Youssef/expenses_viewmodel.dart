@@ -9,6 +9,11 @@ class ExpensesViewModel {
 
   List<Expenses> _expensesList = [];
   List<Expenses> get expensesList => _expensesList;
+  // ✨ ADD THESE TO YOUR EXISTING ExpensesViewModel CLASS
+
+  List<Map<String, dynamic>> _purchaseHistory = [];
+  List<Map<String, dynamic>> get purchaseHistory => _purchaseHistory;
+
 
   // Callback déclenché lorsque la liste des dépenses change
   Function()? onExpensesUpdated;
@@ -234,4 +239,53 @@ class ExpensesViewModel {
   void dispose() {
     onExpensesUpdated = null;
   }
+
+// Load user's purchase history
+  Future<void> loadPurchaseHistory() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        print('❌ User not logged in');
+        return;
+      }
+
+      _purchaseHistory = await _repository.getUserPurchaseHistory(userId);
+      onExpensesUpdated?.call();
+      print('✅ Loaded ${_purchaseHistory.length} purchase records');
+    } catch (e) {
+      print('❌ Error loading purchase history: $e');
+    }
+  }
+
+// Checkout - Save cart to purchase history
+  Future<bool> checkout(List<Map<String, dynamic>> cartItems) async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        print('❌ User not logged in');
+        return false;
+      }
+
+      final total = cartItems.fold<double>(
+        0,
+            (sum, item) => sum + (item['price'] * item['quantity']),
+      );
+
+      final success = await _repository.savePurchaseHistory(
+        userId,
+        cartItems,
+        total,
+      );
+
+      if (success) {
+        await loadPurchaseHistory(); // Refresh
+      }
+
+      return success;
+    } catch (e) {
+      print('❌ Error during checkout: $e');
+      return false;
+    }
+  }
+
 }

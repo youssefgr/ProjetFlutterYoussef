@@ -171,4 +171,56 @@ class ExpensesRepository {
       throw e;
     }
   }
+  // ✨ ADD THESE NEW METHODS TO YOUR EXISTING CLASS
+
+// Save purchase history to Supabase
+  Future<bool> savePurchaseHistory(
+      String userId,
+      List<Map<String, dynamic>> items,
+      double total,
+      ) async {
+    try {
+      print('📝 Saving purchase history for user: $userId');
+
+      for (var item in items) {
+        await Supabase.instance.client.from('purchase_history').insert({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'user_id': userId,
+          'item_name': item['name'],
+          'price': item['price'],
+          'quantity': item['quantity'],
+          'category': item['category'],
+          'total': item['price'] * item['quantity'],
+          'purchase_date': DateTime.now().toIso8601String(),
+        });
+      }
+
+      print('✅ Purchase history saved');
+      return true;
+    } catch (e) {
+      print('❌ Error saving purchase history: $e');
+      return false;
+    }
+  }
+
+// Get user's purchase history from Supabase
+  Future<List<Map<String, dynamic>>> getUserPurchaseHistory(
+      String userId) async {
+    try {
+      print('📥 Loading purchase history for user: $userId');
+
+      final response = await Supabase.instance.client
+          .from('purchase_history')
+          .select()
+          .eq('user_id', userId)
+          .order('purchase_date', ascending: false);
+
+      print('✅ Loaded ${(response as List).length} purchase records');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('❌ Error loading purchase history: $e');
+      return [];
+    }
+  }
+
 }

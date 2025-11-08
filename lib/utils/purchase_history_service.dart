@@ -1,56 +1,34 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:projetflutteryoussef/Models/Youssef/purchase_history.dart';
 
 class PurchaseHistoryService {
-  static const String _storageKey = 'purchase_history';
+  static final _supabase = Supabase.instance.client;
+  static const String _table = 'purchase_history';
 
-  // Save a new purchase
-  static Future<bool> savePurchase({
+  // ✨ SAVE PURCHASE TO SUPABASE WITH USER ID
+  static Future<bool> savePurchaseToSupabase({
     required List<Map<String, dynamic>> cartItems,
     required double total,
     required String email,
-    String? userId,
+    required String userId,
   }) async {
     try {
-      print('💾 Saving purchase to history...');
+      print('💾 Saving purchase to Supabase for user: $userId');
 
-      // Create purchase record
-      final purchase = PurchaseRecord(
-        id: 'PUR-${DateTime.now().millisecondsSinceEpoch}',
-        date: DateTime.now(),
-        items: cartItems.map((item) {
-          return PurchaseItem(
-            id: item['id'],
-            title: item['title'],
-            category: item['category'],
-            quantity: item['qty'],
-            price: item['price'].toDouble(),
-          );
-        }).toList(),
-        total: total,
-        email: email,
-        userId: userId,
-      );
+      final purchaseId = 'PUR-${DateTime.now().millisecondsSinceEpoch}';
 
-      // Get existing history
-      final prefs = await SharedPreferences.getInstance();
-      final historyJson = prefs.getString(_storageKey);
+      // Create the purchase record
+      await _supabase.from(_table).insert({
+        'id': purchaseId,
+        'user_id': userId,  // ← KEY: Store user ID
+        'email': email,
+        'total': total,
+        'items': cartItems,
+        'purchase_date': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
-      List<PurchaseRecord> history = [];
-      if (historyJson != null) {
-        final List<dynamic> decoded = jsonDecode(historyJson);
-        history = decoded.map((json) => PurchaseRecord.fromJson(json)).toList();
-      }
-
-      // Add new purchase
-      history.insert(0, purchase); // Most recent first
-
-      // Save back to storage
-      final encoded = jsonEncode(history.map((p) => p.toJson()).toList());
-      await prefs.setString(_storageKey, encoded);
-
-      print('✅ Purchase saved: ${purchase.id}');
+      print('✅ Purchase saved to Supabase for user: $userId');
       return true;
     } catch (e) {
       print('❌ Error saving purchase: $e');
@@ -58,80 +36,65 @@ class PurchaseHistoryService {
     }
   }
 
-  // Get all purchases
-  static Future<List<PurchaseRecord>> getAllPurchases() async {
+  // ✨ GET PURCHASES FOR CURRENT USER ONLY
+  static Future<List<Map<String, dynamic>>> getPurchasesForUser(String userId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final historyJson = prefs.getString(_storageKey);
+      print('📋 Loading purchases for user: $userId');
 
-      if (historyJson == null) {
-        return [];
-      }
+      final response = await _supabase
+          .from(_table)
+          .select()
+          .eq('user_id', userId)  // ← FILTER BY USER ID
+          .order('purchase_date', ascending: false);
 
-      final List<dynamic> decoded = jsonDecode(historyJson);
-      return decoded.map((json) => PurchaseRecord.fromJson(json)).toList();
+      print('📋 Found ${response.length} purchases for user: $userId');
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       print('❌ Error loading purchases: $e');
       return [];
     }
   }
 
-  // Clear all history (useful for testing)
-  static Future<void> clearHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
-    print('🗑️ Purchase history cleared');
-  }
-
-  // Get total spending
-  static Future<double> getTotalSpending() async {
-    final purchases = await getAllPurchases();
-
-    // Await all totals, resolving potential Future<double>s
-    final totals = await Future.wait(purchases.map((purchase) async => purchase.total));
-
-    // Now sum all resolved doubles
-    double sum = 0.0;
-    for (var total in totals) {
-      sum += total;
-    }
-    return sum;
-
-  }
-
-
-
-  // Get purchase count
-  static Future<int> getPurchaseCount() async {
-    final purchases = await getAllPurchases();
-    return purchases.length;
-  }
-
-  // Link purchases to user (for future Supabase integration)
-  static Future<void> linkPurchasesToUser(String userId) async {
+  // ✨ GET TOTAL SPENDING FOR USER
+  static Future<double> getTotalSpendingForUser(String userId) async {
     try {
-      final purchases = await getAllPurchases();
-
-      // Update all purchases with userId
-      final updatedPurchases = purchases.map((purchase) {
-        return PurchaseRecord(
-          id: purchase.id,
-          date: purchase.date,
-          items: purchase.items,
-          total: purchase.total,
-          email: purchase.email,
-          userId: userId,
-        );
-      }).toList();
-
-      // Save back
-      final prefs = await SharedPreferences.getInstance();
-      final encoded = jsonEncode(updatedPurchases.map((p) => p.toJson()).toList());
-      await prefs.setString(_storageKey, encoded);
-
-      print('✅ Linked ${purchases.length} purchases to user: $userId');
+      final purchases = await getPurchasesForUser(userId);
+      double sum = 0.0;
+      for (var purchase in purchases) {
+        sum += (purchase['total'] as num).toDouble();
+      }
+      return sum;
     } catch (e) {
-      print('❌ Error linking purchases: $e');
+      print('❌ Error calculating total: $e');
+      return 0.0;
+    }
+  }
+
+  // ✨ GET PURCHASE COUNT FOR USER (SIMPLE)
+  static Future<int> getPurchaseCountForUser(String userId) async {
+    try {
+      final purchases = await getPurchasesForUser(userId);
+      return purchases.length;
+    } catch (e) {
+      print('❌ Error getting purchase count: $e');
+      return 0;
+    }
+  }
+
+  // ✨ DELETE PURCHASE
+  static Future<bool> deletePurchase(String purchaseId, String userId) async {
+    try {
+      await _supabase
+          .from(_table)
+          .delete()
+          .eq('id', purchaseId)
+          .eq('user_id', userId);  // ← Only delete own purchases
+
+      print('🗑️ Purchase deleted');
+      return true;
+    } catch (e) {
+      print('❌ Error deleting purchase: $e');
+      return false;
     }
   }
 }

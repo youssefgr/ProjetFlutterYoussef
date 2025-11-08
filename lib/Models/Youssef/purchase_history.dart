@@ -4,7 +4,7 @@ class PurchaseRecord {
   final List<PurchaseItem> items;
   final double total;
   final String email;
-  final String? userId; // For future Supabase integration
+  final String? userId;  // ← ADD THIS
 
   PurchaseRecord({
     required this.id,
@@ -12,10 +12,22 @@ class PurchaseRecord {
     required this.items,
     required this.total,
     required this.email,
-    this.userId,
+    this.userId,  // ← ADD THIS
   });
 
-  // Convert to JSON for storage
+  factory PurchaseRecord.fromJson(Map<String, dynamic> json) {
+    return PurchaseRecord(
+      id: json['id'] as String,
+      date: DateTime.parse(json['date'] as String),
+      items: ((json['items'] as List?) ?? [])
+          .map((item) => PurchaseItem.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      total: (json['total'] as num).toDouble(),
+      email: json['email'] as String,
+      userId: json['user_id'] as String?,  // ← ADD THIS
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -23,22 +35,8 @@ class PurchaseRecord {
       'items': items.map((item) => item.toJson()).toList(),
       'total': total,
       'email': email,
-      'userId': userId,
+      'user_id': userId,  // ← ADD THIS
     };
-  }
-
-  // Create from JSON
-  factory PurchaseRecord.fromJson(Map<String, dynamic> json) {
-    return PurchaseRecord(
-      id: json['id'],
-      date: DateTime.parse(json['date']),
-      items: (json['items'] as List)
-          .map((item) => PurchaseItem.fromJson(item))
-          .toList(),
-      total: json['total'].toDouble(),
-      email: json['email'],
-      userId: json['userId'],
-    );
   }
 }
 
@@ -57,6 +55,18 @@ class PurchaseItem {
     required this.price,
   });
 
+  double get subtotal => price * quantity;
+
+  factory PurchaseItem.fromJson(Map<String, dynamic> json) {
+    return PurchaseItem(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      category: json['category'] as String,
+      quantity: json['quantity'] as int,
+      price: (json['price'] as num).toDouble(),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -66,16 +76,4 @@ class PurchaseItem {
       'price': price,
     };
   }
-
-  factory PurchaseItem.fromJson(Map<String, dynamic> json) {
-    return PurchaseItem(
-      id: json['id'],
-      title: json['title'],
-      category: json['category'],
-      quantity: json['quantity'],
-      price: json['price'].toDouble(),
-    );
-  }
-
-  double get subtotal => price * quantity;
 }
