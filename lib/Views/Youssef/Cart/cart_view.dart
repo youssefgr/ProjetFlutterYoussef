@@ -7,6 +7,8 @@ import 'package:projetflutteryoussef/utils/purchase_history_service.dart';
 import 'package:projetflutteryoussef/Views/Youssef/Cart/purchase_history_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../utils/inventory_service.dart';
+
 class CartView extends StatefulWidget {
   const CartView({super.key});
 
@@ -211,7 +213,7 @@ class _CartViewState extends State<CartView> {
             IconButton(
               icon: const Icon(Icons.close, color: Colors.red),
               onPressed: () {
-                cart.removeItem(item['id']);
+                cart.removeFromCart(item['id']);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${item['title']} removed from cart'),
@@ -278,7 +280,6 @@ class _CartViewState extends State<CartView> {
                 }
                 return null;
               },
-
             ),
           ],
         ),
@@ -362,7 +363,6 @@ class _CartViewState extends State<CartView> {
     setState(() => _isProcessing = true);
 
     try {
-      // ✨ GET CURRENT USER ID FROM SUPABASE
       final supabaseUser = Supabase.instance.client.auth.currentUser;
       final String userId = supabaseUser?.id ?? 'anonymous';
 
@@ -376,34 +376,80 @@ class _CartViewState extends State<CartView> {
         if (!mounted) return;
 
         if (valid) {
+          // ✨ CHECK IF ALL ITEMS ARE IN STOCK
+          print('🛒 Checking stock for all items...');
+          for (var item in cart.cartItems) {
+            bool hasStock = await InventoryService.isInStock(
+              item['id'],
+              item['qty'] as int,
+            );
+
+            if (!hasStock) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('❌ ${item['title']} is out of stock!'),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+              if (mounted) setState(() => _isProcessing = false);
+              return;
+            }
+          }
+
+          print('✅ All items in stock! Processing purchase...');
+
           await sendPurchaseEmail(
             email: _emailController.text.trim(),
             items: cart.cartItems,
             total: cart.totalPrice,
           );
 
-          // ✨ SAVE TO SUPABASE (FIXED - use correct method name!)
-          await PurchaseHistoryService.savePurchaseToSupabase(
+          // ✨ SAVE TO SUPABASE
+          final savedSuccessfully = await PurchaseHistoryService.savePurchaseToSupabase(
             cartItems: cart.cartItems,
             total: cart.totalPrice,
             email: _emailController.text.trim(),
             userId: userId,
           );
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✅ Purchase successful! Receipt sent to ${_emailController.text}'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-            cart.clearCart();
-            _emailController.clear();
+          if (savedSuccessfully) {
+            // ✨ DECREASE STOCK FOR EACH ITEM
+            print('📦 Decreasing stock for purchased items...');
+            for (var item in cart.cartItems) {
+              await InventoryService.decreaseStock(
+                item['id'],
+                item['qty'] as int,
+              );
+            }
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✅ Purchase successful! Receipt sent to ${_emailController.text}'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+              cart.clearCart();
+              _emailController.clear();
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('❌ Purchase failed! Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         }
       }
     } catch (e) {
+      print('❌ Error in _handlePurchase: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -416,9 +462,6 @@ class _CartViewState extends State<CartView> {
       if (mounted) setState(() => _isProcessing = false);
     }
   }
-
-
-
 
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {

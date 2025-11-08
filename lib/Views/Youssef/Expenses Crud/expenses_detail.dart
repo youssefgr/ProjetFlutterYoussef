@@ -176,7 +176,7 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
         height: 300,
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(20),
             bottomRight: Radius.circular(20),
           ),
@@ -209,14 +209,14 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
           width: double.infinity,
           height: 300,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.only(
+            borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
             ),
             color: Colors.grey.shade200,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.only(
+            borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
             ),
@@ -386,78 +386,87 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
     }
   }
 
-  // ✨ FIXED DIALOG - USE PROVIDER
+  // ✨ FIXED - Create controller inside dialog, dispose on close ONLY
   void _showAddToCartDialog(BuildContext context) {
-    final TextEditingController qtyController = TextEditingController(text: "1");
+    TextEditingController? qtyController;
 
     showDialog(
       context: context,
       builder: (dialogContext) {
+        // ✨ Create controller INSIDE builder
+        qtyController = TextEditingController(text: "1");
+
         return AlertDialog(
           title: const Text('Add to Cart'),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Product: ${_currentExpense.title}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Product: ${_currentExpense.title}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Enter quantity to add:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                const SizedBox(height: 16),
+                const Text(
+                  'Enter quantity to add:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: qtyController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
+                const SizedBox(height: 12),
+                TextField(
+                  controller: qtyController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: 'Max: ${_currentExpense.amount.toInt()} available',
+                    prefixIcon: const Icon(Icons.shopping_bag),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  hintText: 'Max: ${_currentExpense.amount.toInt()} available',
-                  prefixIcon: const Icon(Icons.shopping_bag),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Price: ${_currentExpense.price.toStringAsFixed(2)} € per unit',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Price: ${_currentExpense.price.toStringAsFixed(2)} € per unit',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () {
+                // ✨ Dispose before closing
+                qtyController?.dispose();
+                Navigator.pop(dialogContext);
+              },
               child: const Text('Cancel'),
             ),
             ElevatedButton.icon(
@@ -470,7 +479,7 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
               icon: const Icon(Icons.add_shopping_cart),
               label: const Text('Add'),
               onPressed: () {
-                final qty = int.tryParse(qtyController.text) ?? 0;
+                final qty = int.tryParse(qtyController?.text ?? '0') ?? 0;
 
                 if (qty <= 0 || qty > _currentExpense.amount.toInt()) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -484,19 +493,20 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                   return;
                 }
 
-                // ✨ GET CART FROM PROVIDER (SAME INSTANCE)
+                // ✨ GET CART FROM PROVIDER
                 final cart = Provider.of<CartManager>(context, listen: false);
 
-                // ✨ ADD ITEMS WITH QUANTITY
-                for (int i = 0; i < qty; i++) {
-                  cart.addToCart(
-                    _currentExpense.id,
-                    _currentExpense.title,
-                    _currentExpense.price,
-                    _currentExpense.category.name,
-                  );
-                }
+                // ✨ ADD ITEM WITH QUANTITY
+                cart.addToCart(
+                  _currentExpense.id,
+                  _currentExpense.title,
+                  _currentExpense.price,
+                  _currentExpense.category.name,
+                  qty: qty,
+                );
 
+                // ✨ Dispose before closing
+                qtyController?.dispose();
                 Navigator.pop(dialogContext);
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -520,7 +530,6 @@ class _ExpensesDetailState extends State<ExpensesDetail> {
                     ),
                   ),
                 );
-                qtyController.dispose();
               },
             ),
           ],
