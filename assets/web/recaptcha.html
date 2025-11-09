@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>reCAPTCHA v2</title>
+    <link rel="icon" href="data:,">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 360px;
+            width: 100%;
+        }
+        .icon { font-size: 48px; margin-bottom: 15px; }
+        h2 { color: #333; margin: 10px 0; font-size: 22px; }
+        .subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+        .captcha-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            min-height: 78px;
+        }
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        .success { color: #4CAF50; font-weight: 600; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="icon">🛡️</div>
+    <h2>Security Check</h2>
+    <p class="subtitle">Please verify you're human</p>
+
+    <div class="captcha-wrapper">
+        <div class="g-recaptcha"
+             data-sitekey="6LeQk_4rAAAAAK2x8hImvyyzOrrVKoLSAokG08d_"
+             data-callback="onCaptchaSuccess"
+             data-expired-callback="onCaptchaExpired"
+             data-error-callback="onCaptchaError">
+        </div>
+    </div>
+
+    <div id="status" class="status"></div>
+</div>
+
+<script>
+    let tokenSent = false;
+
+    function onCaptchaSuccess(token) {
+        if (tokenSent) {
+            console.log('Token already sent');
+            return;
+        }
+        tokenSent = true;
+
+        console.log('✅ v2 CAPTCHA verified! Token:', token.substring(0, 30) + '...');
+        document.getElementById('status').innerHTML = '<span class="success">✓ Verified!</span>';
+
+        setTimeout(() => {
+            if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                window.flutter_inappwebview.callHandler("onTokenReceived", token);
+            } else {
+                console.error('Flutter bridge not available');
+                document.getElementById('status').innerHTML = '<span class="error">Bridge error</span>';
+            }
+        }, 200);
+    }
+
+    function onCaptchaExpired() {
+        console.log('CAPTCHA expired');
+        tokenSent = false;
+        document.getElementById('status').innerHTML = '<span class="error">Expired. Try again.</span>';
+    }
+
+    function onCaptchaError() {
+        console.error('CAPTCHA error');
+        document.getElementById('status').innerHTML = '<span class="error">Error loading CAPTCHA</span>';
+    }
+
+    window.addEventListener('flutterInAppWebViewPlatformReady', function() {
+        console.log('Flutter bridge ready');
+    });
+</script>
+</body>
+</html>
