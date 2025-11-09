@@ -44,7 +44,7 @@ dependencies:
   #Akram
   #Youssef
   shared_preferences: ^2.2.2  # For local storage
-  intl: ^0.18.1  # For date formatting
+  intl: ^0.20.2   # For date formatting
   syncfusion_flutter_xlsio: ^31.2.4
   file_picker: ^10.3.3
   open_file: ^3.2.1
@@ -55,6 +55,10 @@ dependencies:
   flutter_inappwebview: ^6.1.5
   provider: ^6.0.0
   #Youssef
+  #Maamoune
+  #provider: ^6.1.1
+  awesome_notifications: ^0.10.1
+  #Maamoune
 
 
   # The following adds the Cupertino Icons font to your application.

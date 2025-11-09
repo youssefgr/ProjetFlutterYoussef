@@ -7,8 +7,19 @@ import 'package:provider/provider.dart';
 import 'Views/Akram/media_google_connect.dart';
 import 'Views/Youssef/Cart/cart_manager.dart';
 
+
+
+import 'package:projetflutteryoussef/viewmodels/maamoune/user_viewmodel.dart';
+import 'package:projetflutteryoussef/viewmodels/maamoune/community_viewmodel.dart';
+import 'package:projetflutteryoussef/viewmodels/maamoune/friendship_viewmodel.dart';
+import 'services/maamoune/notification_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await NotificationService.initialize();
+NotificationService.startPeriodicRecommendations();
+
 
   RecaptchaHandler.instance.setupSiteKey(dataSiteKey: "6LfRUfwrAAAAANDXqp1T1YAN8UrwVggR9fcPeTWB");
 
@@ -17,7 +28,18 @@ Future<void> main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcHp0Y2poZ2Jla2JhZGZvc3Z0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0MjczNzcsImV4cCI6MjA3NzAwMzM3N30.6SFr-6oB7e_4eGMGK5F74kZb42jXW52TRdz04NnOuls',
   );
 
-  runApp(const MyApp());
+  runApp(
+  MultiProvider(
+    providers: [
+      //ChangeNotifierProvider(create: (_) => CartManager()),
+      ChangeNotifierProvider(create: (_) => UserViewModel()),
+      ChangeNotifierProvider(create: (_) => CommunityViewModel()),
+      ChangeNotifierProvider(create: (_) => FriendshipViewModel()),
+    ],
+    child: const MyApp(),
+  ),
+);
+
 }
 
 class MyApp extends StatelessWidget {

@@ -6,6 +6,12 @@ import '../../Akram/Media/media_list.dart';
 import '../../Youssef/Expenses Crud/expenses_list.dart';
 import '../../Youssef/Subscriptions Crud/subscriptions_list.dart';
 
+
+
+//import 'package:projetflutteryoussef/Views/Home/home.dart';
+//import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
+import 'package:projetflutteryoussef/Views/maamoune/community_management_screen.dart';
+
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
 
@@ -15,7 +21,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [MediaHome(), MediaList(), ExpensesList(), SubscriptionsList()];
+  final List<Widget> _interfaces = const [MediaHome(), MediaList(), ExpensesList(), SubscriptionsList(), CommunityManagementScreen()];
 
   Future<void> _handleDisconnect() async {
     try {
@@ -93,9 +99,9 @@ class _NavBottomState extends State<NavBottom> {
             ),
             _buildDrawerItem(Icons.home, "Media Home", 0),
             _buildDrawerItem(Icons.movie, "My Media", 1),
-            _buildDrawerItem(Icons.cloud, "Cloud Management", 0),
-            _buildDrawerItem(Icons.attach_money, "Expenses Management", 0),
-            _buildDrawerItem(Icons.people, "Community Management", 0),
+            _buildDrawerItem(Icons.cloud, "Cloud Management", 2),
+            _buildDrawerItem(Icons.attach_money, "Expenses Management", 3),
+            _buildDrawerItem(Icons.people, "Community Management", 4),
             _buildDrawerItem(Icons.event, "Event Management", 0),
             const Spacer(),
             Container(
