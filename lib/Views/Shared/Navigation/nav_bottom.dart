@@ -6,8 +6,6 @@ import '../../Akram/Media/media_list.dart';
 import '../../Youssef/Expenses Crud/expenses_list.dart';
 import '../../Youssef/Subscriptions Crud/subscriptions_list.dart';
 
-
-
 //import 'package:projetflutteryoussef/Views/Home/home.dart';
 //import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
 import 'package:projetflutteryoussef/Views/maamoune/community_management_screen.dart';
@@ -21,7 +19,13 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [MediaHome(), MediaList(), ExpensesList(), SubscriptionsList(), CommunityManagementScreen()];
+  final List<Widget> _interfaces = const [
+    MediaHome(),
+    MediaList(),
+    ExpensesList(),
+    SubscriptionsList(),
+    CommunityManagementScreen(),
+  ];
 
   Future<void> _handleDisconnect() async {
     try {
@@ -102,7 +106,7 @@ class _NavBottomState extends State<NavBottom> {
             _buildDrawerItem(Icons.cloud, "Cloud Management", 2),
             _buildDrawerItem(Icons.attach_money, "Expenses Management", 3),
             _buildDrawerItem(Icons.people, "Community Management", 4),
-            _buildDrawerItem(Icons.event, "Event Management", 0),
+            //_buildDrawerItem(Icons.event, "Event Management", 0),
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(16),
@@ -154,11 +158,13 @@ class _NavBottomState extends State<NavBottom> {
         backgroundColor: Colors.black,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.movie), label: "My Media"),
           BottomNavigationBarItem(icon: Icon(Icons.money), label: "Expenses"),
           BottomNavigationBarItem(icon: Icon(Icons.task), label: "Subscriptions"),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Community"),
         ],
         currentIndex: _currentIndex,
         onTap: (int index) => setState(() => _currentIndex = index),

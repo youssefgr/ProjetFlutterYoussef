@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../Models/maamoune/user.dart';
 import '../../Models/maamoune/friendship.dart';
 import '../../viewmodels/maamoune/user_viewmodel.dart';
@@ -13,113 +14,54 @@ class UserScreen extends StatefulWidget {
 }
 
 class _UserScreenState extends State<UserScreen> {
-  final String currentUserId = 'current_user_123';
+  String? currentUserId;
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    currentUserId = Supabase.instance.client.auth.currentUser?.id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<UserViewModel>().fetchUsers();
-      context.read<FriendshipViewModel>().fetchFriendships();
+      _initializeData();
     });
   }
 
-  void _showAddUserDialog() {
-    _usernameController.clear();
-    _emailController.clear();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.person_add, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 8),
-            const Text('Add Test User'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Add users to test friend requests and communities',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: 'Username',
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                prefixIcon: const Icon(Icons.email),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_usernameController.text.isNotEmpty && _emailController.text.isNotEmpty) {
-                final newUser = User(
-                  userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-                  username: _usernameController.text,
-                  email: _emailController.text,
-                  avatarUrl: 'https://ui-avatars.com/api/?name=${_usernameController.text}',
-                );
-                context.read<UserViewModel>().addUser(newUser);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${newUser.username} added successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _initializeData() async {
+    if (mounted) {
+      await context.read<UserViewModel>().fetchUsers();
+      await context.read<FriendshipViewModel>().fetchFriendships();
+    }
   }
 
-  void _sendFriendRequest(User user) {
-    final friendshipViewModel = context.read<FriendshipViewModel>();
+  void _sendFriendRequest(User user) async {
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to send friend requests'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
+    final friendshipViewModel = context.read<FriendshipViewModel>();
     final newFriendship = Friendship(
       friendshipId: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: currentUserId,
+      userId: currentUserId!,
       friendId: user.userId,
       status: FriendshipStatus.pending,
     );
 
-    friendshipViewModel.sendFriendRequest(newFriendship);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Friend request sent to ${user.username}!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    await friendshipViewModel.sendFriendRequest(newFriendship);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Friend request sent to ${user.username}!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   void _unfriend(User user, String friendshipId) {
@@ -136,15 +78,17 @@ class _UserScreenState extends State<UserScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              context.read<FriendshipViewModel>().deleteFriendship(friendshipId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Unfriended ${user.username}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              await context.read<FriendshipViewModel>().deleteFriendship(friendshipId);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Unfriended ${user.username}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Unfriend'),
           ),
@@ -153,15 +97,30 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  Widget _buildActionButton(User user, FriendshipViewModel friendshipViewModel) {
+  Widget _buildActionButton(User user, List<Friendship> allFriendships) {
+    if (currentUserId == null) {
+      return const Chip(
+        label: Text('Login Required', style: TextStyle(fontSize: 12)),
+        backgroundColor: Colors.grey,
+      );
+    }
+
     if (user.userId == currentUserId) {
-      return Chip(
-        label: const Text('You', style: TextStyle(color: Colors.white)),
+      return const Chip(
+        label: Text('You', style: TextStyle(color: Colors.white, fontSize: 12)),
         backgroundColor: Colors.blue,
       );
     }
 
-    final friendship = friendshipViewModel.getFriendshipBetween(currentUserId, user.userId);
+    // Find friendship between current user and this user
+    Friendship? friendship;
+    for (var f in allFriendships) {
+      if ((f.userId == currentUserId && f.friendId == user.userId) ||
+          (f.userId == user.userId && f.friendId == currentUserId)) {
+        friendship = f;
+        break;
+      }
+    }
 
     if (friendship == null) {
       return ElevatedButton.icon(
@@ -191,7 +150,7 @@ class _UserScreenState extends State<UserScreen> {
 
     if (friendship.status == FriendshipStatus.accepted) {
       return ElevatedButton.icon(
-        onPressed: () => _unfriend(user, friendship.friendshipId),
+        onPressed: () => _unfriend(user, friendship!.friendshipId),
         icon: const Icon(Icons.person_remove, size: 18),
         label: const Text('Unfriend'),
         style: ElevatedButton.styleFrom(
@@ -213,7 +172,6 @@ class _UserScreenState extends State<UserScreen> {
 
   List<User> _getFilteredUsers(List<User> users) {
     if (_searchQuery.isEmpty) return users;
-
     return users.where((user) {
       return user.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           user.email.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -308,7 +266,34 @@ class _UserScreenState extends State<UserScreen> {
               Expanded(
                 child: Consumer2<UserViewModel, FriendshipViewModel>(
                   builder: (context, userViewModel, friendshipViewModel, child) {
+                    if (userViewModel.isLoading || friendshipViewModel.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (userViewModel.error != null) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error: ${userViewModel.error}',
+                              style: const TextStyle(color: Colors.red),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _initializeData(),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     final allUsers = userViewModel.users;
+                    final allFriendships = friendshipViewModel.friendships;
                     final filteredUsers = _getFilteredUsers(allUsers);
 
                     if (allUsers.isEmpty) {
@@ -332,7 +317,7 @@ class _UserScreenState extends State<UserScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Add test users to get started',
+                              'Users will appear here',
                               style: TextStyle(color: Colors.grey[400]),
                             ),
                           ],
@@ -370,7 +355,7 @@ class _UserScreenState extends State<UserScreen> {
                     }
 
                     return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: filteredUsers.length,
                       itemBuilder: (context, index) {
                         final user = filteredUsers[index];
@@ -387,14 +372,19 @@ class _UserScreenState extends State<UserScreen> {
                               backgroundColor: user.userId == currentUserId
                                   ? Colors.blue
                                   : Theme.of(context).primaryColor,
-                              child: Text(
+                              backgroundImage: user.avatarUrl.isNotEmpty
+                                  ? NetworkImage(user.avatarUrl)
+                                  : null,
+                              child: user.avatarUrl.isEmpty
+                                  ? Text(
                                 user.username[0].toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
-                              ),
+                              )
+                                  : null,
                             ),
                             title: Text(
                               user.username,
@@ -412,23 +402,18 @@ class _UserScreenState extends State<UserScreen> {
                                     children: [
                                       const Icon(Icons.email, size: 14, color: Colors.grey),
                                       const SizedBox(width: 4),
-                                      Text(user.email),
+                                      Expanded(
+                                        child: Text(
+                                          user.email,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  if (user.communities.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.groups, size: 14, color: Colors.grey),
-                                        const SizedBox(width: 4),
-                                        Text('${user.communities.length} communities'),
-                                      ],
-                                    ),
-                                  ],
                                 ],
                               ),
                             ),
-                            trailing: _buildActionButton(user, friendshipViewModel),
+                            trailing: _buildActionButton(user, allFriendships),
                           ),
                         );
                       },
@@ -440,19 +425,12 @@ class _UserScreenState extends State<UserScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddUserDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Test User'),
-      ),
     );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _usernameController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 }

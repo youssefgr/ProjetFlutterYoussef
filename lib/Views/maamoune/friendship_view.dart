@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../Models/maamoune/friendship.dart';
 import '../../Models/maamoune/user.dart';
 import '../../viewmodels/maamoune/friendship_viewmodel.dart';
@@ -14,16 +15,36 @@ class FriendshipScreen extends StatefulWidget {
 
 class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final String currentUserId = 'current_user_123';
+  String? currentUserId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FriendshipViewModel>().fetchFriendships();
-      context.read<UserViewModel>().fetchUsers();
+      _initializeData();
     });
+  }
+
+  Future<void> _initializeData() async {
+    if (currentUserId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to view friendships'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      await context.read<FriendshipViewModel>().fetchFriendships();
+      await context.read<UserViewModel>().fetchUsers();
+    }
   }
 
   @override
@@ -32,21 +53,24 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
     super.dispose();
   }
 
-  User? _getUserById(String userId, UserViewModel userViewModel) {
-    return userViewModel.getUserById(userId);
+  Future<User?> _getUserById(String userId, UserViewModel userViewModel) async {
+    return await userViewModel.getUserById(userId);
   }
 
-  void _acceptRequest(Friendship friendship) {
-    context.read<FriendshipViewModel>().updateFriendshipStatus(
+  void _acceptRequest(Friendship friendship) async {
+    await context.read<FriendshipViewModel>().updateFriendshipStatus(
       friendship.friendshipId,
       FriendshipStatus.accepted,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Friend request accepted!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Friend request accepted!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   void _rejectRequest(Friendship friendship) {
@@ -63,15 +87,17 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              context.read<FriendshipViewModel>().deleteFriendship(friendship.friendshipId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Friend request rejected'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              await context.read<FriendshipViewModel>().deleteFriendship(friendship.friendshipId);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Friend request rejected'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Reject'),
           ),
@@ -94,15 +120,17 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              context.read<FriendshipViewModel>().deleteFriendship(friendship.friendshipId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Unfriended $username'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              await context.read<FriendshipViewModel>().deleteFriendship(friendship.friendshipId);
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Unfriended $username'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Unfriend'),
           ),
@@ -112,9 +140,39 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
   }
 
   Widget _buildPendingRequestsTab() {
+    if (currentUserId == null) {
+      return const Center(child: Text('Please log in to view requests'));
+    }
+
     return Consumer2<FriendshipViewModel, UserViewModel>(
       builder: (context, friendshipViewModel, userViewModel, child) {
-        final pendingRequests = friendshipViewModel.getPendingRequests(currentUserId);
+        if (friendshipViewModel.isLoading || userViewModel.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (friendshipViewModel.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: ${friendshipViewModel.error}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _initializeData(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final pendingRequests = friendshipViewModel.getPendingRequests(currentUserId!);
 
         if (pendingRequests.isEmpty) {
           return Center(
@@ -137,63 +195,80 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
           itemCount: pendingRequests.length,
           itemBuilder: (context, index) {
             final friendship = pendingRequests[index];
-            final sender = _getUserById(friendship.userId, userViewModel);
 
-            if (sender == null) return const SizedBox.shrink();
+            return FutureBuilder<User?>(
+              future: _getUserById(friendship.userId, userViewModel),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
 
-            return Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.orange,
-                      child: Text(
-                        sender.username[0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sender.username,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          Text(sender.email, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    Column(
+                final sender = snapshot.data;
+                if (sender == null) return const SizedBox.shrink();
+
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       children: [
-                        ElevatedButton(
-                          onPressed: () => _acceptRequest(friendship),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          ),
-                          child: const Text('Accept', style: TextStyle(color: Colors.white)),
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.orange,
+                          backgroundImage: sender.avatarUrl.isNotEmpty ? NetworkImage(sender.avatarUrl) : null,
+                          child: sender.avatarUrl.isEmpty
+                              ? Text(
+                            sender.username[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontSize: 20),
+                          )
+                              : null,
                         ),
-                        const SizedBox(height: 4),
-                        OutlinedButton(
-                          onPressed: () => _rejectRequest(friendship),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sender.username,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              Text(sender.email, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
                           ),
-                          child: const Text('Reject'),
+                        ),
+                        Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () => _acceptRequest(friendship),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                              child: const Text('Accept', style: TextStyle(color: Colors.white)),
+                            ),
+                            const SizedBox(height: 4),
+                            OutlinedButton(
+                              onPressed: () => _rejectRequest(friendship),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                              child: const Text('Reject'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -202,9 +277,39 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
   }
 
   Widget _buildFriendsTab() {
+    if (currentUserId == null) {
+      return const Center(child: Text('Please log in to view friends'));
+    }
+
     return Consumer2<FriendshipViewModel, UserViewModel>(
       builder: (context, friendshipViewModel, userViewModel, child) {
-        final friends = friendshipViewModel.getAcceptedFriends(currentUserId);
+        if (friendshipViewModel.isLoading || userViewModel.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (friendshipViewModel.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: ${friendshipViewModel.error}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _initializeData(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final friends = friendshipViewModel.getAcceptedFriends(currentUserId!);
 
         if (friends.isEmpty) {
           return Center(
@@ -228,50 +333,67 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
           itemBuilder: (context, index) {
             final friendship = friends[index];
             final friendId = friendship.userId == currentUserId ? friendship.friendId : friendship.userId;
-            final friend = _getUserById(friendId, userViewModel);
 
-            if (friend == null) return const SizedBox.shrink();
+            return FutureBuilder<User?>(
+              future: _getUserById(friendId, userViewModel),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
 
-            return Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.green,
-                  child: Text(
-                    friend.username[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
-                  ),
-                ),
-                title: Text(
-                  friend.username,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(friend.email, style: const TextStyle(fontSize: 12)),
-                    if (friend.communities.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.groups, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text('${friend.communities.length} communities', style: const TextStyle(fontSize: 12)),
+                final friend = snapshot.data;
+                if (friend == null) return const SizedBox.shrink();
+
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.green,
+                      backgroundImage: friend.avatarUrl.isNotEmpty ? NetworkImage(friend.avatarUrl) : null,
+                      child: friend.avatarUrl.isEmpty
+                          ? Text(
+                        friend.username[0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                      )
+                          : null,
+                    ),
+                    title: Text(
+                      friend.username,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(friend.email, style: const TextStyle(fontSize: 12)),
+                        if (friend.communities.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.groups, size: 14, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text('${friend.communities.length} communities', style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
                         ],
-                      ),
-                    ],
-                  ],
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.person_remove, color: Colors.red),
-                  onPressed: () => _unfriend(friendship, friend.username),
-                ),
-              ),
+                      ],
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.person_remove, color: Colors.red),
+                      onPressed: () => _unfriend(friendship, friend.username),
+                    ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -280,9 +402,39 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
   }
 
   Widget _buildSentRequestsTab() {
+    if (currentUserId == null) {
+      return const Center(child: Text('Please log in to view sent requests'));
+    }
+
     return Consumer2<FriendshipViewModel, UserViewModel>(
       builder: (context, friendshipViewModel, userViewModel, child) {
-        final sentRequests = friendshipViewModel.getSentRequests(currentUserId);
+        if (friendshipViewModel.isLoading || userViewModel.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (friendshipViewModel.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: ${friendshipViewModel.error}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _initializeData(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final sentRequests = friendshipViewModel.getSentRequests(currentUserId!);
 
         if (sentRequests.isEmpty) {
           return Center(
@@ -305,34 +457,51 @@ class _FriendshipScreenState extends State<FriendshipScreen> with SingleTickerPr
           itemCount: sentRequests.length,
           itemBuilder: (context, index) {
             final friendship = sentRequests[index];
-            final recipient = _getUserById(friendship.friendId, userViewModel);
 
-            if (recipient == null) return const SizedBox.shrink();
+            return FutureBuilder<User?>(
+              future: _getUserById(friendship.friendId, userViewModel),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
 
-            return Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.orange,
-                  child: Text(
-                    recipient.username[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                final recipient = snapshot.data;
+                if (recipient == null) return const SizedBox.shrink();
+
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.orange,
+                      backgroundImage: recipient.avatarUrl.isNotEmpty ? NetworkImage(recipient.avatarUrl) : null,
+                      child: recipient.avatarUrl.isEmpty
+                          ? Text(
+                        recipient.username[0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontSize: 20),
+                      )
+                          : null,
+                    ),
+                    title: Text(
+                      recipient.username,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Text(recipient.email),
+                    trailing: const Chip(
+                      label: Text('Pending', style: TextStyle(fontSize: 12)),
+                      backgroundColor: Colors.orange,
+                    ),
                   ),
-                ),
-                title: Text(
-                  recipient.username,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                subtitle: Text(recipient.email),
-                trailing: const Chip(
-                  label: Text('Pending', style: TextStyle(fontSize: 12)),
-                  backgroundColor: Colors.orange,
-                ),
-              ),
+                );
+              },
             );
           },
         );

@@ -4,16 +4,16 @@ class CommunityRepository {
   final List<Community> _communities = [];
 
   // CREATE
-  void createCommunity(Community community) {
+  Future<void> createCommunity(Community community) async {
     _communities.add(community);
   }
 
   // READ
-  List<Community> getAllCommunities() {
+  Future<List<Community>> getAllCommunities() async {
     return List.unmodifiable(_communities);
   }
 
-  Community? getCommunityById(String id) {
+  Future<Community?> getCommunityById(String id) async {
     try {
       return _communities.firstWhere((c) => c.communityId == id);
     } catch (e) {
@@ -22,14 +22,14 @@ class CommunityRepository {
   }
 
   // Get communities a user has joined
-  List<Community> getCommunitiesByUserId(String userId) {
+  Future<List<Community>> getCommunitiesByUserId(String userId) async {
     return _communities
         .where((c) => c.isMember(userId))
         .toList();
   }
 
   // UPDATE
-  void updateCommunity(Community updatedCommunity) {
+  Future<void> updateCommunity(Community updatedCommunity) async {
     final index = _communities.indexWhere((c) => c.communityId == updatedCommunity.communityId);
     if (index != -1) {
       _communities[index] = updatedCommunity;
@@ -37,21 +37,21 @@ class CommunityRepository {
   }
 
   // Join community
-  void joinCommunity(String communityId, String userId) {
-    final community = getCommunityById(communityId);
+  Future<void> joinCommunity(String communityId, String userId) async {
+    final community = await getCommunityById(communityId);
     if (community != null && !community.isMember(userId)) {
       final updatedMembers = [...community.memberIds, userId];
-      updateCommunity(community.copyWith(memberIds: updatedMembers));
+      await updateCommunity(community.copyWith(memberIds: updatedMembers));
     }
   }
 
   // Leave community
-  void leaveCommunity(String communityId, String userId) {
-    final community = getCommunityById(communityId);
+  Future<void> leaveCommunity(String communityId, String userId) async {
+    final community = await getCommunityById(communityId);
     if (community != null && !community.isOwner(userId)) {
       final updatedMembers = community.memberIds.where((id) => id != userId).toList();
       final updatedAdmins = community.adminIds.where((id) => id != userId).toList();
-      updateCommunity(community.copyWith(
+      await updateCommunity(community.copyWith(
         memberIds: updatedMembers,
         adminIds: updatedAdmins,
       ));
@@ -59,25 +59,25 @@ class CommunityRepository {
   }
 
   // Make user admin
-  void promoteToAdmin(String communityId, String userId) {
-    final community = getCommunityById(communityId);
+  Future<void> promoteToAdmin(String communityId, String userId) async {
+    final community = await getCommunityById(communityId);
     if (community != null && !community.isAdmin(userId)) {
       final updatedAdmins = [...community.adminIds, userId];
-      updateCommunity(community.copyWith(adminIds: updatedAdmins));
+      await updateCommunity(community.copyWith(adminIds: updatedAdmins));
     }
   }
 
   // Remove admin role
-  void demoteFromAdmin(String communityId, String userId) {
-    final community = getCommunityById(communityId);
+  Future<void> demoteFromAdmin(String communityId, String userId) async {
+    final community = await getCommunityById(communityId);
     if (community != null && !community.isOwner(userId)) {
       final updatedAdmins = community.adminIds.where((id) => id != userId).toList();
-      updateCommunity(community.copyWith(adminIds: updatedAdmins));
+      await updateCommunity(community.copyWith(adminIds: updatedAdmins));
     }
   }
 
   // DELETE
-  void deleteCommunity(String id) {
+  Future<void> deleteCommunity(String id) async {
     _communities.removeWhere((c) => c.communityId == id);
   }
 }

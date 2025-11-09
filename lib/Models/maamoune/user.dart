@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class User {
   final String userId;
   final String username;
@@ -13,9 +15,10 @@ class User {
     this.communities = const [],
   });
 
+  /// Create User from Supabase database row (public.users table)
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      userId: json['user_id'] ?? '',
+      userId: json['id'] ?? '',
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'] ?? '',
@@ -25,9 +28,23 @@ class User {
     );
   }
 
+  /// Create User from Supabase Auth User object
+  /// This is useful when you just authenticated and want to create a User object
+  factory User.fromAuthUser(AuthUser authUser) {
+    return User(
+      userId: authUser.id,
+      username: authUser.userMetadata?['username'] ??
+          authUser.email?.split('@')[0] ?? '',
+      email: authUser.email ?? '',
+      avatarUrl: authUser.userMetadata?['avatar_url'] ?? '',
+      communities: [],
+    );
+  }
+
+  /// Convert User to JSON for database operations
   Map<String, dynamic> toJson() {
     return {
-      'user_id': userId,
+      'id': userId,
       'username': username,
       'email': email,
       'avatar_url': avatarUrl,
@@ -35,6 +52,7 @@ class User {
     };
   }
 
+  /// Create a copy of User with updated fields
   User copyWith({
     String? userId,
     String? username,
