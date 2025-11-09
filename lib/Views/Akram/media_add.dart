@@ -22,7 +22,7 @@ class _MediaAddState extends State<MediaAdd> {
   final List<MediaGenre> _selectedGenres = [];
 
   File? _selectedImage;
-  String? _savedImageName; // Store just the image name with extension
+  String? _savedImageName; // Store just the images name with extension
 
   final ImagePicker _picker = ImagePicker();
 
@@ -254,7 +254,7 @@ class _MediaAddState extends State<MediaAdd> {
           Icon(Icons.photo_library, size: 50, color: Colors.grey[400]),
           const SizedBox(height: 8),
           Text(
-            'No image selected',
+            'No images selected',
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -269,7 +269,7 @@ class _MediaAddState extends State<MediaAdd> {
         await _processSelectedImage(File(image.path), image.name);
       }
     } catch (e) {
-      _showErrorSnackBar('Failed to pick image: $e');
+      _showErrorSnackBar('Failed to pick images: $e');
     }
   }
 
@@ -286,17 +286,17 @@ class _MediaAddState extends State<MediaAdd> {
 
   Future<void> _processSelectedImage(File imageFile, String originalName) async {
     try {
-      // Save image to app directory
+      // Save images to app directory
       final String _ = await ImageUtils.saveImageToAppDirectory(imageFile, originalName);
 
       setState(() {
         _selectedImage = imageFile;
-        _savedImageName = originalName; // Store the image name with extension
+        _savedImageName = originalName; // Store the images name with extension
       });
 
       _showSuccessSnackBar('Image saved successfully: $originalName');
     } catch (e) {
-      _showErrorSnackBar('Failed to save image: $e');
+      _showErrorSnackBar('Failed to save images: $e');
     }
   }
 

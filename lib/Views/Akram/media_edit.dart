@@ -186,7 +186,7 @@ class _MediaEditState extends State<MediaEdit> {
                         CircularProgressIndicator(color: Colors.grey[400]),
                         const SizedBox(height: 8),
                         Text(
-                          'Loading image...',
+                          'Loading images...',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
@@ -262,7 +262,7 @@ class _MediaEditState extends State<MediaEdit> {
                 children: [
                   Icon(Icons.photo_library, size: 40, color: Colors.grey),
                   SizedBox(height: 8),
-                  Text('No image available'),
+                  Text('No images available'),
                 ],
               ),
             ),
@@ -271,7 +271,7 @@ class _MediaEditState extends State<MediaEdit> {
 
         const SizedBox(height: 8),
         Text(
-          'Note: To change image, delete and recreate this media item.',
+          'Note: To change images, delete and recreate this media item.',
           style: TextStyle(color: Colors.grey[600], fontSize: 12),
         ),
       ],

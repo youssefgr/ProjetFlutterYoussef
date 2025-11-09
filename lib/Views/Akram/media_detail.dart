@@ -166,7 +166,7 @@ class MediaDetail extends StatelessWidget {
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text(
-                  'Loading image...',
+                  'Loading images...',
                   style: TextStyle(color: Colors.grey),
                 ),
               ],

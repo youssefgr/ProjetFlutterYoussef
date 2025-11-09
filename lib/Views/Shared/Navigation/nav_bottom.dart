@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projetflutteryoussef/Views/Home/home.dart';
 import 'package:projetflutteryoussef/Views/Akram/media_list.dart';
+import 'package:projetflutteryoussef/Views/Yassine/event_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -11,7 +12,7 @@ class NavBottom extends StatefulWidget {
 
 class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
-  final List<Widget> _interfaces = const [Home(), MediaList()];
+  final List<Widget> _interfaces = const [Home(), MediaList(),EventListScreen(),];
 
   @override
   Widget build(BuildContext context) {
@@ -65,11 +66,12 @@ class _NavBottomState extends State<NavBottom> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.movie),
+              leading: const Icon(Icons.event),
               title: const Text("Event Management"),
               onTap: () {
                 setState(() {
-                  _currentIndex = 0; // MediaList index
+                  _currentIndex = 2; // MediaList index
+
                 });
                 Navigator.pop(context);
               },
@@ -108,7 +110,8 @@ class _NavBottomState extends State<NavBottom> {
             label: "Subscription",
           )*/
         ],
-        currentIndex: _currentIndex,
+        currentIndex: _currentIndex > 1 ? 0 : _currentIndex,
+
         onTap: (int index) {
           setState(() {
             _currentIndex = index;

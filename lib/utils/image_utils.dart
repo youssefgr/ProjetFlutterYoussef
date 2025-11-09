@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ImageUtils {
-  // Function to get the app's documents directory for image storage
+  // Function to get the app's documents directory for images storage
   static Future<String> getImagesDirectory() async {
     final appDir = await getApplicationDocumentsDirectory();
     final imagesDir = Directory('${appDir.path}/media_images');
@@ -15,7 +15,7 @@ class ImageUtils {
     return imagesDir.path;
   }
 
-  // Function to copy image to app's documents directory
+  // Function to copy images to app's documents directory
   static Future<String> saveImageToAppDirectory(File imageFile, String originalName) async {
     try {
       final imagesDir = await getImagesDirectory();
@@ -25,11 +25,11 @@ class ImageUtils {
       await imageFile.copy(newPath);
       return newPath;
     } catch (e) {
-      throw Exception('Failed to save image: $e');
+      throw Exception('Failed to save images: $e');
     }
   }
 
-  // Function to get image file from app's documents directory
+  // Function to get images file from app's documents directory
   static Future<File?> getImageFile(String imageName) async {
     try {
       final imagesDir = await getImagesDirectory();
@@ -45,7 +45,7 @@ class ImageUtils {
     }
   }
 
-  // Function to delete image from app's documents directory
+  // Function to delete images from app's documents directory
   static Future<void> deleteImage(String imageName) async {
     try {
       final imagesDir = await getImagesDirectory();
@@ -57,7 +57,7 @@ class ImageUtils {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Failed to delete image: $e');
+        print('Failed to delete images: $e');
       }
     }
   }
