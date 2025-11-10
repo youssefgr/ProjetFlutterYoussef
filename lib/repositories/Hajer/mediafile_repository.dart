@@ -7,11 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../Models/Hajer/mediafile.dart';
-import '../services/drive_service.dart';
-import '../services/auto_tagging_service.dart';
-import '../utils/hash_utils.dart';
-import '../utils/supabase_manager.dart';
+import '../../Models/Hajer/mediafile.dart';
+import '../../services/Hajer/auto_tagging_service.dart';
+import '../../services/Hajer/drive_service.dart';
+import '../../utils/hash_utils.dart';
+import '../../utils/supabase_manager.dart';
+
 
 /// 🧩 Repository : couche métier pour gérer les fichiers média
 class MediaFileRepository {

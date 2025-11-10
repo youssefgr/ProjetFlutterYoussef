@@ -2,7 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/drive/v3.dart' as gdrive;
-import '../utils/supabase_manager.dart';
+
+import '../../utils/supabase_manager.dart';
 
 class DriveService {
   bool _isRefreshing = false;

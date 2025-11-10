@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../Models/Hajer/mediafile.dart';
-import '../repositories/mediafile_repository.dart';
+import '../repositories/Hajer/mediafile_repository.dart';
 import '../utils/supabase_manager.dart';
 
 /// 🧠 ViewModel central — relie l'interface utilisateur au dépôt (repository)

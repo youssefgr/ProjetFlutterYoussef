@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:projetflutteryoussef/Models/Hajer/sharedalbum.dart';
-import '../repositories/shared_album_repository.dart';
+import '../repositories/Hajer/shared_album_repository.dart';
 
 class SharedAlbumViewModel extends ChangeNotifier {
   final repo = SharedAlbumRepository();
