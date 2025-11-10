@@ -49,12 +49,16 @@ class _UserScreenState extends State<UserScreen> {
     final newFriendship = Friendship(
       friendshipId: DateTime.now().millisecondsSinceEpoch.toString(),
       userId: currentUserId!,
-      friendId: user.userId,
+      friendId: user.id,
       status: FriendshipStatus.pending,
     );
 
     await friendshipViewModel.sendFriendRequest(newFriendship);
+
+    // Refresh friendships to update UI
     if (mounted) {
+      await context.read<FriendshipViewModel>().fetchFriendships();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Friend request sent to ${user.username}!'),
@@ -80,7 +84,10 @@ class _UserScreenState extends State<UserScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               await context.read<FriendshipViewModel>().deleteFriendship(friendshipId);
+
+              // Refresh friendships to update UI
               if (mounted) {
+                await context.read<FriendshipViewModel>().fetchFriendships();
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -105,18 +112,17 @@ class _UserScreenState extends State<UserScreen> {
       );
     }
 
-    if (user.userId == currentUserId) {
+    if (user.id == currentUserId) {
       return const Chip(
         label: Text('You', style: TextStyle(color: Colors.white, fontSize: 12)),
         backgroundColor: Colors.blue,
       );
     }
 
-    // Find friendship between current user and this user
     Friendship? friendship;
     for (var f in allFriendships) {
-      if ((f.userId == currentUserId && f.friendId == user.userId) ||
-          (f.userId == user.userId && f.friendId == currentUserId)) {
+      if ((f.userId == currentUserId && f.friendId == user.id) ||
+          (f.userId == user.id && f.friendId == currentUserId)) {
         friendship = f;
         break;
       }
@@ -136,11 +142,18 @@ class _UserScreenState extends State<UserScreen> {
 
     if (friendship.status == FriendshipStatus.pending) {
       if (friendship.userId == currentUserId) {
-        return const Chip(
-          label: Text('Request Sent', style: TextStyle(fontSize: 12)),
+        // I sent the request
+        return Chip(
+          label: const Text('Request Sent', style: TextStyle(fontSize: 12)),
           backgroundColor: Colors.orange,
+          onDeleted: () {
+            // Allow cancelling sent request
+            context.read<FriendshipViewModel>().deleteFriendship(friendship!.friendshipId);
+            context.read<FriendshipViewModel>().fetchFriendships();
+          },
         );
       } else {
+        // They sent me a request
         return const Chip(
           label: Text('Pending', style: TextStyle(fontSize: 12)),
           backgroundColor: Colors.orange,
@@ -301,11 +314,7 @@ class _UserScreenState extends State<UserScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.person_off,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
+                            Icon(Icons.person_off, size: 80, color: Colors.grey[300]),
                             const SizedBox(height: 16),
                             Text(
                               'No users yet',
@@ -330,11 +339,7 @@ class _UserScreenState extends State<UserScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
+                            Icon(Icons.search_off, size: 80, color: Colors.grey[300]),
                             const SizedBox(height: 16),
                             Text(
                               'No users found',
@@ -369,7 +374,7 @@ class _UserScreenState extends State<UserScreen> {
                             contentPadding: const EdgeInsets.all(16),
                             leading: CircleAvatar(
                               radius: 28,
-                              backgroundColor: user.userId == currentUserId
+                              backgroundColor: user.id == currentUserId
                                   ? Colors.blue
                                   : Theme.of(context).primaryColor,
                               backgroundImage: user.avatarUrl.isNotEmpty

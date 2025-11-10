@@ -13,16 +13,18 @@ class Friendship {
     required this.status,
   });
 
-  factory Friendship.fromJson(Map<String, dynamic> json) {
+  /// Create Friendship from Supabase public.friendships table
+  factory Friendship.fromMap(Map<String, dynamic> map) {
     return Friendship(
-      friendshipId: json['friendship_id'] ?? '',
-      userId: json['user_id'] ?? '',
-      friendId: json['friend_id'] ?? '',
-      status: _statusFromString(json['status']),
+      friendshipId: map['friendship_id'] ?? '',
+      userId: map['user_id'] ?? '',
+      friendId: map['friend_id'] ?? '',
+      status: _statusFromString(map['status']),
     );
   }
 
-  Map<String, dynamic> toJson() {
+  /// Convert Friendship to Map for database operations
+  Map<String, dynamic> toMap() {
     return {
       'friendship_id': friendshipId,
       'user_id': userId,

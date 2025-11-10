@@ -7,110 +7,40 @@ class FriendshipRepository {
   /// CREATE - Send a friend request
   Future<void> sendFriendRequest(Friendship friendship) async {
     try {
-      await _supabase.from('friendships').insert(friendship.toJson());
+      await _supabase.from('friendships').insert(friendship.toMap());
     } catch (e) {
-      print('Error sending friend request: $e');
-      rethrow;
+      throw Exception('Failed to send friend request: $e');
     }
   }
 
   /// READ - Get all friendships
   Future<List<Friendship>> getAllFriendships() async {
     try {
-      final response = await _supabase
-          .from('friendships')
-          .select()
-          .order('created_at', ascending: false);
-
+      final response = await _supabase.from('friendships').select();
       return (response as List)
-          .map((data) => Friendship.fromJson(data))
+          .map((data) => Friendship.fromMap(data))
           .toList();
     } catch (e) {
-      print('Error fetching friendships: $e');
-      return [];
+      throw Exception('Failed to fetch friendships: $e');
     }
   }
 
-  /// READ - Get pending friend requests for a user (received requests)
-  Future<List<Friendship>> getPendingRequests(String userId) async {
+  /// READ - Get friendships for a specific user
+  Future<List<Friendship>> getFriendshipsByUserId(String userId) async {
     try {
       final response = await _supabase
           .from('friendships')
           .select()
-          .eq('friend_id', userId)
-          .eq('status', 'pending')
-          .order('created_at', ascending: false);
-
+          .or('user_id.eq.$userId,friend_id.eq.$userId');
       return (response as List)
-          .map((data) => Friendship.fromJson(data))
+          .map((data) => Friendship.fromMap(data))
           .toList();
     } catch (e) {
-      print('Error fetching pending requests: $e');
-      return [];
+      throw Exception('Failed to fetch user friendships: $e');
     }
   }
 
-  /// READ - Get accepted friends of a user
-  Future<List<Friendship>> getAcceptedFriends(String userId) async {
-    try {
-      final response = await _supabase
-          .from('friendships')
-          .select()
-          .eq('status', 'accepted')
-          .order('created_at', ascending: false);
-
-      final allAccepted = (response as List)
-          .map((data) => Friendship.fromJson(data))
-          .toList();
-
-      return allAccepted
-          .where((f) => f.userId == userId || f.friendId == userId)
-          .toList();
-    } catch (e) {
-      print('Error fetching accepted friends: $e');
-      return [];
-    }
-  }
-
-  /// READ - Get sent friend requests (pending requests sent by user)
-  Future<List<Friendship>> getSentRequests(String userId) async {
-    try {
-      final response = await _supabase
-          .from('friendships')
-          .select()
-          .eq('user_id', userId)
-          .eq('status', 'pending')
-          .order('created_at', ascending: false);
-
-      return (response as List)
-          .map((data) => Friendship.fromJson(data))
-          .toList();
-    } catch (e) {
-      print('Error fetching sent requests: $e');
-      return [];
-    }
-  }
-
-  /// READ - Get blocked users
-  Future<List<Friendship>> getBlockedUsers(String userId) async {
-    try {
-      final response = await _supabase
-          .from('friendships')
-          .select()
-          .eq('user_id', userId)
-          .eq('status', 'blocked')
-          .order('created_at', ascending: false);
-
-      return (response as List)
-          .map((data) => Friendship.fromJson(data))
-          .toList();
-    } catch (e) {
-      print('Error fetching blocked users: $e');
-      return [];
-    }
-  }
-
-  /// READ - Get specific friendship by ID
+  /// READ - Get specific friendship
   Future<Friendship?> getFriendshipById(String friendshipId) async {
     try {
       final response = await _supabase
@@ -120,10 +50,9 @@ class FriendshipRepository {
           .maybeSingle();
 
       if (response == null) return null;
-      return Friendship.fromJson(response);
+      return Friendship.fromMap(response);
     } catch (e) {
-      print('Error fetching friendship: $e');
-      return null;
+      throw Exception('Failed to get friendship: $e');
     }
   }
 
@@ -135,8 +64,7 @@ class FriendshipRepository {
           .update({'status': 'accepted'})
           .eq('friendship_id', friendshipId);
     } catch (e) {
-      print('Error accepting friend request: $e');
-      rethrow;
+      throw Exception('Failed to accept friend request: $e');
     }
   }
 
@@ -148,8 +76,7 @@ class FriendshipRepository {
           .update({'status': status.name})
           .eq('friendship_id', friendshipId);
     } catch (e) {
-      print('Error updating friendship status: $e');
-      rethrow;
+      throw Exception('Failed to update friendship status: $e');
     }
   }
 
@@ -161,8 +88,7 @@ class FriendshipRepository {
           .update({'status': 'blocked'})
           .eq('friendship_id', friendshipId);
     } catch (e) {
-      print('Error blocking user: $e');
-      rethrow;
+      throw Exception('Failed to block user: $e');
     }
   }
 
@@ -171,15 +97,14 @@ class FriendshipRepository {
     try {
       await _supabase
           .from('friendships')
-          .update({'status': 'pending'})
+          .update({'status': 'accepted'})
           .eq('friendship_id', friendshipId);
     } catch (e) {
-      print('Error unblocking user: $e');
-      rethrow;
+      throw Exception('Failed to unblock user: $e');
     }
   }
 
-  /// DELETE - Remove a friendship
+  /// DELETE - Delete friendship
   Future<void> deleteFriendship(String friendshipId) async {
     try {
       await _supabase
@@ -187,8 +112,19 @@ class FriendshipRepository {
           .delete()
           .eq('friendship_id', friendshipId);
     } catch (e) {
-      print('Error deleting friendship: $e');
-      rethrow;
+      throw Exception('Failed to delete friendship: $e');
+    }
+  }
+
+  /// DELETE - Decline a friend request
+  Future<void> declineFriendRequest(String friendshipId) async {
+    try {
+      await _supabase
+          .from('friendships')
+          .delete()
+          .eq('friendship_id', friendshipId);
+    } catch (e) {
+      throw Exception('Failed to decline friend request: $e');
     }
   }
 }

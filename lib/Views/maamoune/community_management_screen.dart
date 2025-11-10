@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:projetflutteryoussef/Views/maamoune/user_view.dart';
-import 'package:projetflutteryoussef/Views/maamoune/community_view.dart';
-import 'package:projetflutteryoussef/Views/maamoune/friendship_view.dart';
+import 'user_view.dart';
+import 'community_view.dart';
+import 'friendship_view.dart';
 
 class CommunityManagementScreen extends StatefulWidget {
   const CommunityManagementScreen({super.key});
 
   @override
-  State<CommunityManagementScreen> createState() => _CommunityManagementScreenState();
+  State<CommunityManagementScreen> createState() =>
+      _CommunityManagementScreenState();
 }
 
 class _CommunityManagementScreenState extends State<CommunityManagementScreen>
@@ -30,7 +31,8 @@ class _CommunityManagementScreenState extends State<CommunityManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Community Management'),
+        title: const Text('Community'),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -43,8 +45,8 @@ class _CommunityManagementScreenState extends State<CommunityManagementScreen>
               text: 'Communities',
             ),
             Tab(
-              icon: Icon(Icons.people_alt),
-              text: 'Friendships',
+              icon: Icon(Icons.group),
+              text: 'Friends',
             ),
           ],
         ),

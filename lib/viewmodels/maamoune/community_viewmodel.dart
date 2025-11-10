@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:projetflutteryoussef/Models/maamoune/community.dart';
 import 'package:projetflutteryoussef/repositories/maamoune/community_repository.dart';
 
 class CommunityViewModel extends ChangeNotifier {
   final CommunityRepository _repository = CommunityRepository();
+  late SupabaseClient _supabase;
 
   List<Community> _communities = [];
   bool _isLoading = false;
@@ -14,7 +16,11 @@ class CommunityViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Fetch all communities from database
+  CommunityViewModel() {
+    _supabase = Supabase.instance.client;
+  }
+
+  // Fetch all communities
   Future<void> fetchCommunities() async {
     _setLoading(true);
     try {
@@ -22,130 +28,111 @@ class CommunityViewModel extends ChangeNotifier {
       _error = null;
     } catch (e) {
       _error = 'Failed to fetch communities: $e';
+      print('❌ Error fetching communities: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Create a new community
-  Future<void> createCommunity(Community community) async {
-    _setLoading(true);
-    try {
-      await _repository.createCommunity(community);
-      await fetchCommunities();
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to create community: $e';
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Update a community
-  Future<void> updateCommunity(Community community) async {
-    _setLoading(true);
-    try {
-      await _repository.updateCommunity(community);
-      await fetchCommunities();
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to update community: $e';
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Delete a community
-  Future<void> deleteCommunity(String id) async {
-    _setLoading(true);
-    try {
-      await _repository.deleteCommunity(id);
-      await fetchCommunities();
-      _error = null;
-    } catch (e) {
-      _error = 'Failed to delete community: $e';
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Join a community
+  // Join a community
   Future<void> joinCommunity(String communityId, String userId) async {
     _setLoading(true);
     try {
+      print('👥 Joining community: $communityId');
       await _repository.joinCommunity(communityId, userId);
       await fetchCommunities();
       _error = null;
+      print('✅ Joined community successfully');
     } catch (e) {
       _error = 'Failed to join community: $e';
+      print('❌ Error joining community: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Leave a community
+  // Leave a community
   Future<void> leaveCommunity(String communityId, String userId) async {
     _setLoading(true);
     try {
+      print('👋 Leaving community: $communityId');
       await _repository.leaveCommunity(communityId, userId);
       await fetchCommunities();
       _error = null;
+      print('✅ Left community successfully');
     } catch (e) {
       _error = 'Failed to leave community: $e';
+      print('❌ Error leaving community: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Promote a user to admin
-  Future<void> promoteToAdmin(String communityId, String userId) async {
+  // Rename a community (admin only)
+  Future<void> renameCommunity(String communityId, String newName) async {
     _setLoading(true);
     try {
-      await _repository.promoteToAdmin(communityId, userId);
-      await fetchCommunities();
+      print('📝 Renaming community: $communityId to $newName');
+      await _repository.updateCommunity(communityId, {'name': newName});
+
+      // Update locally
+      final index = _communities.indexWhere((c) => c.communityId == communityId);
+      if (index != -1) {
+        _communities[index] = _communities[index].copyWith(name: newName);
+      }
+
       _error = null;
+      notifyListeners();
+      print('✅ Community renamed successfully');
     } catch (e) {
-      _error = 'Failed to promote to admin: $e';
+      _error = 'Failed to rename community: $e';
+      print('❌ Error renaming community: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Demote a user from admin
-  Future<void> demoteFromAdmin(String communityId, String userId) async {
+  // Change member role (admin only)
+  Future<void> changeMemberRole(String communityId, String userId, String newRole) async {
     _setLoading(true);
     try {
-      await _repository.demoteFromAdmin(communityId, userId);
+      print('👤 Changing role for $userId in community $communityId to $newRole');
+      await _repository.changeMemberRole(communityId, userId, newRole);
       await fetchCommunities();
       _error = null;
+      print('✅ Member role changed successfully');
     } catch (e) {
-      _error = 'Failed to demote from admin: $e';
+      _error = 'Failed to change member role: $e';
+      print('❌ Error changing member role: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Get a community by ID
-  Community? getCommunityById(String id) {
+  // Remove member from community (admin only)
+  Future<void> removeMember(String communityId, String userId) async {
+    _setLoading(true);
     try {
-      return _communities.firstWhere((c) => c.communityId == id);
+      print('🚫 Removing member $userId from community $communityId');
+      await _repository.removeMember(communityId, userId);
+      await fetchCommunities();
+      _error = null;
+      print('✅ Member removed successfully');
     } catch (e) {
-      return null;
+      _error = 'Failed to remove member: $e';
+      print('❌ Error removing member: $e');
+    } finally {
+      _setLoading(false);
     }
   }
 
-  /// Get communities by user ID
-  List<Community> getCommunitiesByUserId(String userId) {
-    return _communities.where((c) => c.isMember(userId)).toList();
-  }
-
-  /// Clear error message
+  // Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
-  /// Private helper to set loading state
+  // Private helper
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
