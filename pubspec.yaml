@@ -39,6 +39,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.5.0
   awesome_notifications: ^0.10.1
+  table_calendar: ^3.2.0
 
   pdf: ^3.11.3
   printing: ^5.14.2

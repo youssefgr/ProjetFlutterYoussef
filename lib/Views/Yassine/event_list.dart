@@ -1,9 +1,12 @@
-// File: EventListScreen.dart
+// File: lib/pages/EventListScreen.dart
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '/viewModels/event_viewmodel.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+
+import 'package:projetflutteryoussef/viewModels/event_viewmodel.dart';
 import '/Models/Yassine/event_name.dart';
 import 'event_add.dart';
 import 'event_edit.dart';
@@ -13,6 +16,13 @@ import '/services/jikan_service.dart';
 import 'event_details.dart';
 import 'upcoming_movies.dart';
 import 'upcoming_anime_page.dart';
+
+// --- IMPORTANT: choose one of the two imports below depending on file location ---
+// If calendar_events_page.dart is in the SAME folder as this file:
+import 'calendar_events_page.dart';
+
+// OR, if calendar_events_page.dart is at lib/pages/calendar_events_page.dart (package import):
+// import 'package:projetflutteryoussef/pages/calendar_events_page.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -111,6 +121,18 @@ class _EventListScreenState extends State<EventListScreen> {
             onPressed: _filteredEvents.isEmpty ? null : _printPdf,
           ),
           IconButton(
+            icon: const Icon(Icons.calendar_month),
+            tooltip: "View Calendar",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CalendarEventsPage(viewModel: _viewModel),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: "Add Event",
             onPressed: () async {
@@ -133,8 +155,7 @@ class _EventListScreenState extends State<EventListScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      UpcomingMoviesPage(viewModel: _viewModel),
+                  builder: (_) => UpcomingMoviesPage(viewModel: _viewModel),
                 ),
               );
             },
