@@ -1,70 +1,66 @@
 class Community {
   final String communityId;
   final String name;
-  final String description;
-  final String ownerId;
-  final List<String> adminIds; // List of admin user IDs
-  final List<String> memberIds; // List of member user IDs
+  final String? description;
+  final List<String> memberIds;
+  final List<String> adminIds;
 
   Community({
     required this.communityId,
     required this.name,
-    required this.description,
-    required this.ownerId,
-    this.adminIds = const [],
+    this.description,
     this.memberIds = const [],
+    this.adminIds = const [],
   });
 
-  factory Community.fromJson(Map<String, dynamic> json) {
-    return Community(
-      communityId: json['community_id'] ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      ownerId: json['owner_id'] ?? '',
-      adminIds: json['admin_ids'] != null
-          ? List<String>.from(json['admin_ids'])
-          : [],
-      memberIds: json['member_ids'] != null
-          ? List<String>.from(json['member_ids'])
-          : [],
-    );
-  }
+  /// Check if user is a member
+  bool isMember(String userId) => memberIds.contains(userId);
 
-  Map<String, dynamic> toJson() {
+  /// Check if user is an admin
+  bool isAdmin(String userId) => adminIds.contains(userId);
+
+  /// Convert to map for database
+  Map<String, dynamic> toMap() {
     return {
-      'community_id': communityId,
+      'id': communityId,
+      'community_id': communityId,  // This was missing!
       'name': name,
       'description': description,
-      'owner_id': ownerId,
-      'admin_ids': adminIds,
       'member_ids': memberIds,
+      'admin_ids': adminIds,
     };
   }
 
+  /// Create from database map
+  factory Community.fromMap(Map<String, dynamic> map) {
+    return Community(
+      communityId: map['id'] ?? '',
+      name: map['name'] ?? 'Unnamed',
+      description: map['description'],
+      memberIds: List<String>.from(map['member_ids'] ?? []),
+      adminIds: List<String>.from(map['admin_ids'] ?? []),
+    );
+  }
+
+  /// Copy with changes
   Community copyWith({
     String? communityId,
     String? name,
     String? description,
-    String? ownerId,
-    List<String>? adminIds,
     List<String>? memberIds,
+    List<String>? adminIds,
   }) {
     return Community(
       communityId: communityId ?? this.communityId,
       name: name ?? this.name,
       description: description ?? this.description,
-      ownerId: ownerId ?? this.ownerId,
-      adminIds: adminIds ?? this.adminIds,
       memberIds: memberIds ?? this.memberIds,
+      adminIds: adminIds ?? this.adminIds,
     );
   }
 
-  bool isOwner(String userId) => ownerId == userId;
-  bool isAdmin(String userId) => adminIds.contains(userId) || isOwner(userId);
-  bool isMember(String userId) => memberIds.contains(userId) || isAdmin(userId);
-
   @override
   String toString() {
-    return 'Community(id: $communityId, name: $name, owner: $ownerId)';
+    return 'Community(id: $communityId, name: $name, members: ${memberIds.length}, admins: ${adminIds.length})';
   }
 }

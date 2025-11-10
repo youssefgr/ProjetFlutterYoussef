@@ -2,18 +2,17 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:projetflutteryoussef/Models/maamoune/user.dart';
 
 class UserRepository {
-  // Get Supabase client instance
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// CREATE - Add a new user profile to public.users
-  /// Note: This is usually handled automatically by the database trigger
-  /// when a user signs up via auth. Only use this if you need manual creation.
   Future<void> addUser(User user) async {
     try {
-      await _supabase.from('users').insert(user.toJson());
+      print('📝 Adding user to database: ${user.id}');
+      await _supabase.from('users').insert(user.toMap());
+      print('✅ User added successfully');
     } catch (e) {
-      print('Error adding user: $e');
-      rethrow;
+      print('❌ Error adding user: $e');
+      throw Exception('Error adding user: $e');
     }
   }
 
@@ -22,15 +21,12 @@ class UserRepository {
     try {
       final response = await _supabase
           .from('users')
-          .select()
-          .order('created_at', ascending: false);
-
+          .select();
       return (response as List)
-          .map((userData) => User.fromJson(userData))
+          .map((userData) => User.fromMap(userData))
           .toList();
     } catch (e) {
-      print('Error fetching all users: $e');
-      return [];
+      throw Exception('Error fetching all users: $e');
     }
   }
 
@@ -44,13 +40,13 @@ class UserRepository {
           .maybeSingle();
 
       if (response == null) {
+        print('⚠️ User not found: $userId');
         return null;
       }
 
-      return User.fromJson(response);
+      return User.fromMap(response);
     } catch (e) {
-      print('Error fetching user by ID: $e');
-      return null;
+      throw Exception('Error fetching user by ID: $e');
     }
   }
 
@@ -64,79 +60,49 @@ class UserRepository {
 
       return await getUserById(authUser.id);
     } catch (e) {
-      print('Error fetching current user: $e');
-      return null;
+      throw Exception('Error fetching current user: $e');
     }
   }
 
   /// UPDATE - Update user profile
   Future<void> updateUser(User updatedUser) async {
     try {
+      print('📝 Updating user: ${updatedUser.id}');
       await _supabase
           .from('users')
-          .update(updatedUser.toJson())
-          .eq('id', updatedUser.userId);
+          .update(updatedUser.toMap())
+          .eq('id', updatedUser.id);
+      print('✅ User updated successfully');
     } catch (e) {
-      print('Error updating user: $e');
-      rethrow;
+      throw Exception('Error updating user: $e');
     }
   }
 
   /// UPDATE - Update specific fields of a user
   Future<void> updateUserFields(String userId, Map<String, dynamic> updates) async {
     try {
+      print('📝 Updating user fields: $userId');
       await _supabase
           .from('users')
           .update(updates)
           .eq('id', userId);
+      print('✅ User fields updated successfully');
     } catch (e) {
-      print('Error updating user fields: $e');
-      rethrow;
-    }
-  }
-
-  /// UPDATE - Add a community to user's communities list
-  Future<void> joinCommunity(String userId, String communityId) async {
-    try {
-      final user = await getUserById(userId);
-      if (user != null && !user.communities.contains(communityId)) {
-        final updatedCommunities = [...user.communities, communityId];
-        await updateUserFields(userId, {'communities': updatedCommunities});
-      }
-    } catch (e) {
-      print('Error joining community: $e');
-      rethrow;
-    }
-  }
-
-  /// UPDATE - Remove a community from user's communities list
-  Future<void> leaveCommunity(String userId, String communityId) async {
-    try {
-      final user = await getUserById(userId);
-      if (user != null && user.communities.contains(communityId)) {
-        final updatedCommunities = user.communities
-            .where((id) => id != communityId)
-            .toList();
-        await updateUserFields(userId, {'communities': updatedCommunities});
-      }
-    } catch (e) {
-      print('Error leaving community: $e');
-      rethrow;
+      throw Exception('Error updating user fields: $e');
     }
   }
 
   /// DELETE - Delete a user profile
-  /// Note: This only deletes from public.users.
-  /// To delete from auth.users, use: _supabase.auth.admin.deleteUser(userId)
   Future<void> deleteUser(String userId) async {
     try {
+      print('🗑️ Deleting user: $userId');
       await _supabase
           .from('users')
           .delete()
           .eq('id', userId);
+      print('✅ User deleted successfully');
     } catch (e) {
-      print('Error deleting user: $e');
-      rethrow;
+      throw Exception('Error deleting user: $e');
     }
   }
 
@@ -148,37 +114,12 @@ class UserRepository {
           .select()
           .ilike('username', '%$searchTerm%')
           .order('username', ascending: true);
-
       return (response as List)
-          .map((userData) => User.fromJson(userData))
+          .map((userData) => User.fromMap(userData))
           .toList();
     } catch (e) {
-      print('Error searching users: $e');
-      return [];
+      throw Exception('Error searching users: $e');
     }
-  }
-
-  /// STREAM - Listen to real-time changes for a specific user
-  Stream<User?> streamUser(String userId) {
-    return _supabase
-        .from('users')
-        .stream(primaryKey: ['id'])
-        .eq('id', userId)
-        .map((data) {
-      if (data.isEmpty) return null;
-      return User.fromJson(data.first);
-    });
-  }
-
-  /// STREAM - Listen to real-time changes for all users
-  Stream<List<User>> streamAllUsers() {
-    return _supabase
-        .from('users')
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((data) {
-      return data.map((userData) => User.fromJson(userData)).toList();
-    });
   }
 
   /// AUTH - Sign up a new user with email and password
@@ -189,6 +130,7 @@ class UserRepository {
     String? avatarUrl,
   }) async {
     try {
+      print('📝 Signing up user: $email');
       final AuthResponse response = await _supabase.auth.signUp(
         email: email,
         password: password,
@@ -199,14 +141,13 @@ class UserRepository {
       );
 
       if (response.user != null) {
-        // Wait a bit for the trigger to create the profile
         await Future.delayed(const Duration(milliseconds: 500));
         return await getUserById(response.user!.id);
       }
+
       return null;
     } catch (e) {
-      print('Error signing up: $e');
-      rethrow;
+      throw Exception('Error signing up: $e');
     }
   }
 
@@ -216,6 +157,7 @@ class UserRepository {
     required String password,
   }) async {
     try {
+      print('📝 Signing in user: $email');
       final AuthResponse response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
@@ -224,20 +166,21 @@ class UserRepository {
       if (response.user != null) {
         return await getUserById(response.user!.id);
       }
+
       return null;
     } catch (e) {
-      print('Error signing in: $e');
-      rethrow;
+      throw Exception('Error signing in: $e');
     }
   }
 
   /// AUTH - Sign out
   Future<void> signOut() async {
     try {
+      print('👋 Signing out user');
       await _supabase.auth.signOut();
+      print('✅ Signed out successfully');
     } catch (e) {
-      print('Error signing out: $e');
-      rethrow;
+      throw Exception('Error signing out: $e');
     }
   }
 }

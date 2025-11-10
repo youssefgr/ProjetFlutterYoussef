@@ -27,6 +27,19 @@ class FriendshipViewModel extends ChangeNotifier {
     }
   }
 
+  /// Fetch friendships for a specific user
+  Future<List<Friendship>> fetchUserFriendships(String userId) async {
+    _setLoading(true);
+    try {
+      return await _repository.getFriendshipsByUserId(userId);
+    } catch (e) {
+      _error = 'Failed to fetch user friendships: $e';
+      return [];
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   /// Get pending friend requests for a user (received requests)
   List<Friendship> getPendingRequests(String userId) {
     return _friendships
@@ -85,6 +98,7 @@ class FriendshipViewModel extends ChangeNotifier {
           status: FriendshipStatus.accepted,
         );
       }
+
       _error = null;
       notifyListeners();
     } catch (e) {
@@ -108,6 +122,7 @@ class FriendshipViewModel extends ChangeNotifier {
           status: status,
         );
       }
+
       _error = null;
       notifyListeners();
     } catch (e) {
@@ -155,6 +170,21 @@ class FriendshipViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _error = 'Failed to delete friendship: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Decline a friend request
+  Future<void> declineFriendRequest(String friendshipId) async {
+    _setLoading(true);
+    try {
+      await _repository.declineFriendRequest(friendshipId);
+      _friendships.removeWhere((f) => f.friendshipId == friendshipId);
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to decline friend request: $e';
     } finally {
       _setLoading(false);
     }

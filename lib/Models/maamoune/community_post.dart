@@ -3,35 +3,66 @@ class CommunityPost {
   final String communityId;
   final String authorId;
   final String content;
-  final DateTime createdAt;
   final List<String> likes;
+  final DateTime createdAt;
 
   CommunityPost({
     required this.postId,
     required this.communityId,
     required this.authorId,
     required this.content,
-    required this.createdAt,
     this.likes = const [],
+    required this.createdAt,
   });
 
-  factory CommunityPost.fromJson(Map<String, dynamic> json) {
+  /// Convert to map for Supabase
+  Map<String, dynamic> toMap() {
+    return {
+      'id': postId,              // Primary key UUID
+      'post_id': postId,         // Duplicate ID field
+      'community_id': communityId,
+      'author_id': authorId,
+      'content': content,
+      'likes': likes,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  /// Create from Supabase map
+  factory CommunityPost.fromMap(Map<String, dynamic> map) {
     return CommunityPost(
-      postId: json['post_id'] ?? '',
-      communityId: json['community_id'] ?? '',
-      authorId: json['author_id'] ?? '',
-      content: json['content'] ?? '',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      likes: List<String>.from(json['likes'] ?? []),
+      postId: map['id'] ?? map['post_id'] ?? '',  // Try 'id' first, then 'post_id'
+      communityId: map['community_id'] ?? '',
+      authorId: map['author_id'] ?? '',
+      content: map['content'] ?? '',
+      likes: List<String>.from(map['likes'] ?? []),
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : DateTime.now(),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'post_id': postId,
-    'community_id': communityId,
-    'author_id': authorId,
-    'content': content,
-    'created_at': createdAt.toIso8601String(),
-    'likes': likes,
-  };
+  /// Copy with changes
+  CommunityPost copyWith({
+    String? postId,
+    String? communityId,
+    String? authorId,
+    String? content,
+    List<String>? likes,
+    DateTime? createdAt,
+  }) {
+    return CommunityPost(
+      postId: postId ?? this.postId,
+      communityId: communityId ?? this.communityId,
+      authorId: authorId ?? this.authorId,
+      content: content ?? this.content,
+      likes: likes ?? this.likes,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'CommunityPost(id: $postId, author: $authorId, likes: ${likes.length})';
+  }
 }

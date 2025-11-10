@@ -4,6 +4,7 @@ import 'package:projetflutteryoussef/repositories/maamoune/community_post_reposi
 
 class CommunityPostViewModel extends ChangeNotifier {
   final CommunityPostRepository _repo = CommunityPostRepository();
+
   List<CommunityPost> _posts = [];
   bool _isLoading = false;
   String? _error;
@@ -12,69 +13,91 @@ class CommunityPostViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> fetchPosts(String communityId) async {
+  /// Fetch posts for a specific community
+  Future<void> fetchPostsByCommunity(String communityId) async {
     _setLoading(true);
     try {
+      print('🔄 Fetching posts for community: $communityId');
       _posts = await _repo.getPostsByCommunity(communityId);
       _error = null;
+      print('✅ Loaded ${_posts.length} posts');
     } catch (e) {
       _error = 'Failed to fetch posts: $e';
+      print('❌ Error: $_error');
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<void> createPost(String communityId, String authorId, String content) async {
+  /// Create a new post
+  Future<void> createPost(CommunityPost post) async {
     _setLoading(true);
     try {
-      final post = CommunityPost(
-        postId: 'post_${DateTime.now().millisecondsSinceEpoch}',
-        communityId: communityId,
-        authorId: authorId,
-        content: content,
-        createdAt: DateTime.now(),
-      );
+      print('📝 Creating post...');
       await _repo.createPost(post);
-      await fetchPosts(communityId);
+      await fetchPostsByCommunity(post.communityId);
       _error = null;
+      print('✅ Post created and list refreshed');
     } catch (e) {
       _error = 'Failed to create post: $e';
+      print('❌ Error: $_error');
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<void> toggleLike(String postId, String userId, String communityId) async {
-    _setLoading(true);
+  /// Like/unlike a post
+  Future<void> likePost(String postId, String userId) async {
     try {
+      print('❤️ Toggling like...');
       await _repo.likePost(postId, userId);
-      await fetchPosts(communityId);
+
+      // Update local state immediately
+      final postIndex = _posts.indexWhere((p) => p.postId == postId);
+      if (postIndex != -1) {
+        final post = _posts[postIndex];
+        if (post.likes.contains(userId)) {
+          post.likes.remove(userId);
+        } else {
+          post.likes.add(userId);
+        }
+        notifyListeners();
+      }
+
       _error = null;
+      print('✅ Like toggled');
     } catch (e) {
       _error = 'Failed to toggle like: $e';
-    } finally {
-      _setLoading(false);
+      print('❌ Error: $_error');
     }
   }
 
-  Future<void> deletePost(String postId, String communityId) async {
+  /// Delete a post
+  Future<void> deletePost(String postId) async {
     _setLoading(true);
     try {
+      print('🗑️ Deleting post...');
       await _repo.deletePost(postId);
-      await fetchPosts(communityId);
+
+      // Remove from local list
+      _posts.removeWhere((p) => p.postId == postId);
       _error = null;
+      print('✅ Post deleted');
     } catch (e) {
       _error = 'Failed to delete post: $e';
+      print('❌ Error: $_error');
     } finally {
       _setLoading(false);
     }
   }
 
+  /// Clear error message
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
+  /// Private helper to set loading state
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
