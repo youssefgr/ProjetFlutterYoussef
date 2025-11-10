@@ -64,7 +64,9 @@ dependencies:
   #Maamoune
   awesome_notifications: ^0.10.1
   #Maamoune
-
+#Yassine
+  table_calendar: ^3.2.0
+#Yassine
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

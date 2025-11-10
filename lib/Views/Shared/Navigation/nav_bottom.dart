@@ -7,7 +7,8 @@ import '../../Youssef/Expenses Crud/expenses_list.dart';
 import '../../Youssef/Subscriptions Crud/subscriptions_list.dart';
 import 'package:projetflutteryoussef/Views/Hajer/mediafile_page.dart';
 import 'package:projetflutteryoussef/Views/Hajer/shared_album_page.dart';
-import 'package:projetflutteryoussef/Views/maamoune/community_management_screen.dart';
+import '../../maamoune/community_management_screen.dart';
+import 'package:projetflutteryoussef/Views/Yassine/event_list.dart';
 
 class NavBottom extends StatefulWidget {
   const NavBottom({super.key});
@@ -20,29 +21,26 @@ class _NavBottomState extends State<NavBottom> {
   int _currentIndex = 0;
 
   final List<Widget> _interfaces = [
-    const MediaHome(), // Onglet 0 → Media Home (Akram)
-    const MediaList(), // Onglet 1 → My Media (Akram)
-    const ExpensesList(), // Onglet 2 → Expenses Management (Youssef)
-    const SubscriptionsList(), // Onglet 3 → Subscriptions (Youssef)
-    const CommunityManagementScreen(), // Onglet 4 → Community (Maamoune)
-    const MediaFilePage(mediaItemId: "00000000-0000-0000-0000-000000000001"), // Onglet 5 → Cloud Manager (Hajer)
-    const SharedAlbumPage(currentUserId: "00000000-0000-0000-0000-000000000001"), // Onglet 6 → Shared Album (Hajer)
+    const MediaHome(), // Akram
+    const MediaList(), // Akram
+    const ExpensesList(), // Youssef
+    const SubscriptionsList(), // Youssef
+    const CommunityManagementScreen(), // Maamoune
+    const MediaFilePage(mediaItemId: "00000000-0000-0000-0000-000000000001"), // Hajer
+    const SharedAlbumPage(currentUserId: "00000000-0000-0000-0000-000000000001"), // Hajer
+    const EventListScreen(), // **Your EventListScreen**
   ];
 
   Future<void> _handleDisconnect() async {
     try {
-      // Clear all sessions and tokens
       await Supabase.instance.client.auth.signOut(scope: SignOutScope.global);
-
       if (mounted) {
-        // Navigate back to login without keeping history
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -70,6 +68,15 @@ class _NavBottomState extends State<NavBottom> {
       ),
     );
   }
+
+  Widget _buildDrawerItem(IconData icon, String title, int index) => ListTile(
+    leading: Icon(icon, color: Colors.white),
+    title: Text(title, style: const TextStyle(color: Colors.white)),
+    onTap: () {
+      setState(() => _currentIndex = index);
+      Navigator.pop(context);
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -101,18 +108,16 @@ class _NavBottomState extends State<NavBottom> {
               backgroundColor: Colors.black,
               automaticallyImplyLeading: false,
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-            ),
-            // ✅ Items du drawer avec navigation correcte
+            const SizedBox(height: 16),
+            // Main navigation
             _buildDrawerItem(Icons.home, "Media Home", 0),
             _buildDrawerItem(Icons.movie, "My Media", 1),
-            _buildDrawerItem(Icons.attach_money, "Expenses Management", 2),
-            _buildDrawerItem(Icons.task, "Subscriptions Management", 3),
-            _buildDrawerItem(Icons.people, "Community Management", 4),
-            _buildDrawerItem(Icons.cloud, "Cloud Management", 5),
+            _buildDrawerItem(Icons.attach_money, "Expenses", 2),
+            _buildDrawerItem(Icons.task, "Subscriptions", 3),
+            _buildDrawerItem(Icons.people, "Community", 4),
+            _buildDrawerItem(Icons.cloud, "Cloud", 5),
             _buildDrawerItem(Icons.share, "Shared Albums", 6),
-
+            _buildDrawerItem(Icons.event, "Event Management", 7),
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(16),
@@ -123,22 +128,20 @@ class _NavBottomState extends State<NavBottom> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    Supabase.instance.client.auth.currentUser?.userMetadata?['full_name'] ??
-                        Supabase.instance.client.auth.currentUser?.email?.split('@')[0] ??
+                    Supabase.instance.client.auth.currentUser
+                        ?.userMetadata?['full_name'] ??
+                        Supabase.instance.client.auth.currentUser?.email
+                            ?.split('@')[0] ??
                         'User',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     Supabase.instance.client.auth.currentUser?.email ?? 'No email',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -172,45 +175,16 @@ class _NavBottomState extends State<NavBottom> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.movie),
-            label: "Media",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
-            label: "Expenses",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.task),
-            label: "Subscriptions",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: "Community",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.cloud),
-            label: "Cloud",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.share),
-            label: "Shared",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.movie), label: "Media"),
+          BottomNavigationBarItem(icon: Icon(Icons.attach_money), label: "Expenses"),
+          BottomNavigationBarItem(icon: Icon(Icons.task), label: "Subscriptions"),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Community"),
+          BottomNavigationBarItem(icon: Icon(Icons.cloud), label: "Cloud"),
+          BottomNavigationBarItem(icon: Icon(Icons.share), label: "Shared"),
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
         ],
       ),
     );
   }
-
-  Widget _buildDrawerItem(IconData icon, String title, int index) => ListTile(
-    leading: Icon(icon, color: Colors.white),
-    title: Text(title, style: const TextStyle(color: Colors.white)),
-    onTap: () {
-      setState(() => _currentIndex = index);
-      Navigator.pop(context);
-    },
-  );
 }
